@@ -37,7 +37,7 @@
 %
 % and set <dim> to something 5cm or larger.
 
-\title{Instructions for *ACL Proceedings}
+\title{BanglaSpeechFM: Towards a Foundation Model for Bangla Speech}
 
 % Author information can be set in various styles:
 % For several authors from the same institution:
@@ -107,9 +107,28 @@
 \begin{document}
 \maketitle
 \begin{abstract}
-This document is a supplement to the general instructions for *ACL authors. It contains instructions for using the \LaTeX{} style files for ACL conferences.
-The document itself conforms to its own specifications, and is therefore an example of what your manuscript should look like.
-These instructions should be used both for papers submitted for review and for final versions of accepted papers.
+The rapid advancement of self-supervised learning (SSL) has revolutionized speech
+representation, yet low-resource languages like Bengali remain largely dependent
+on fine-tuning massive, computationally expensive multilingual foundation mod-
+els. This reliance not only imposes prohibitive resource constraints but also fre-
+quently overlooks the unique phonetic nuances of the Bengali language. To ad-
+dress this critical gap, this thesis introduces a Continuous Latent Autoencoder
+(CLAE)—a highly efficient, 23.8M-parameter speech foundation model developed
+entirely from scratch for 16 kHz Bengali speech. Trained exclusively on publicly
+available datasets using a novel self-supervised objective that optimally combines
+mel-spectrogram reconstruction, Joint-Embedding Predictive Architecture (JEPA),
+and Variance-Invariance-Covariance Regularization (VISReg), our approach gener-
+ates robust, frame-level representations at a 12.5 Hz latent sequence rate. Despite
+its remarkably compact footprint—featuring a 15.29M-parameter frozen feature ex-
+tractor—the proposed model achieves highly competitive, and in specific evaluation
+metrics, superior performance compared to state-of-the-art heavyweight speech mod-
+els. This research breaks new ground by unequivocally demonstrating that training
+a dedicated, lightweight foundation model from scratch is not only a viable path-
+way for low-resource speech AI but also yields highly effective representations for
+downstream analysis. By providing a scalable, resource-efficient architecture, this
+work establishes a new paradigm for accessible and specialized speech representation
+learning in Bengali, paving the way for future innovations in low-resource linguistic
+technologies.
 \end{abstract}
 
 \section{Introduction}
