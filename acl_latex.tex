@@ -30,6 +30,8 @@
 %Including images in your LaTeX document requires adding
 %additional package(s)
 \usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows, positioning, shadows}
 
 % If the title and author information does not fit in the area allocated, uncomment the following
 %
@@ -107,39 +109,97 @@
 \begin{document}
 \maketitle
 \begin{abstract}
-The rapid advancement of self-supervised learning (SSL) has revolutionized speech
-representation, yet low-resource languages like Bengali remain largely dependent
-on fine-tuning massive, computationally expensive multilingual foundation mod-
-els. This reliance not only imposes prohibitive resource constraints but also fre-
-quently overlooks the unique phonetic nuances of the Bengali language. To ad-
-dress this critical gap, this thesis introduces a Continuous Latent Autoencoder
-(CLAE)—a highly efficient, 23.8M-parameter speech foundation model developed
-entirely from scratch for 16 kHz Bengali speech. Trained exclusively on publicly
-available datasets using a novel self-supervised objective that optimally combines
-mel-spectrogram reconstruction, Joint-Embedding Predictive Architecture (JEPA),
-and Variance-Invariance-Covariance Regularization (VISReg), our approach gener-
-ates robust, frame-level representations at a 12.5 Hz latent sequence rate. Despite
-its remarkably compact footprint—featuring a 15.29M-parameter frozen feature ex-
-tractor—the proposed model achieves highly competitive, and in specific evaluation
-metrics, superior performance compared to state-of-the-art heavyweight speech mod-
-els. This research breaks new ground by unequivocally demonstrating that training
-a dedicated, lightweight foundation model from scratch is not only a viable path-
-way for low-resource speech AI but also yields highly effective representations for
-downstream analysis. By providing a scalable, resource-efficient architecture, this
-work establishes a new paradigm for accessible and specialized speech representation
-learning in Bengali, paving the way for future innovations in low-resource linguistic
-technologies.
+Self-supervised learning has greatly improved speech models, but low-resource languages like Bengali still rely heavily on large, expensive multilingual models. These large models are difficult to run and often miss the specific phonetic details of Bengali. In this paper, we introduce a Continuous Latent Autoencoder (CLAE), which is an efficient 23.8M-parameter speech foundation model built from scratch for Bengali speech. We trained it on public datasets using a new self-supervised approach that combines mel-spectrogram reconstruction, Joint-Embedding Predictive Architecture (JEPA), and Variance-Invariance-Covariance Regularization (VISReg). This allows our model to create strong representations at a 12.5 Hz latent sequence rate. Even with a small 15.29M-parameter frozen feature extractor, our model performs just as well as, and sometimes better than, much larger state-of-the-art speech models. Our results show that training a small foundation model from scratch is a practical and effective way to handle low-resource speech tasks. This provides an accessible and resource-friendly option for Bengali speech research and helps set the stage for future work in similar languages.
 \end{abstract}
 
 \section{Introduction}
 
-These instructions are for authors submitting papers to *ACL conferences using \LaTeX. They are not self-contained. All authors must follow the general instructions for *ACL proceedings,\footnote{\url{http://acl-org.github.io/ACLPUB/formatting.html}} and this document contains additional instructions for the \LaTeX{} style files.
+Speech representation learning has seen remarkable progress with the advent of
+self-supervised learning (SSL) techniques, enabling the development of foundation
+models capable of understanding and processing human speech. Traditional SSL approaches
+in speech have often relied on reconstructing raw audio or spectrograms, which can be
+computationally demanding and prone to capturing low-level noise rather than high-level
+semantics. Recently, paradigms such as the Joint-Embedding Predictive Architecture (JEPA) 
+have emerged as highly effective alternatives. By masking regions in high-level feature 
+spaces and predicting latent representations rather than raw pixels or waveforms, JEPA 
+encourages models to learn rich, contextual semantics. While state-of-the-
+art (SOTA) speech models have achieved unprecedented success in high-resource
+languages by leveraging such techniques, low-resource languages like Bengali often suffer 
+from a lack of dedicated, efficient models built from scratch.
 
-The templates include the \LaTeX{} source of this document (\texttt{acl\_latex.tex}),
-the \LaTeX{} style file used to format it (\texttt{acl.sty}),
-an ACL bibliography style (\texttt{acl\_natbib.bst}),
-an example bibliography (\texttt{custom.bib}),
-and the bibliography for the ACL Anthology (\texttt{anthology.bib}).
+Most existing works in Bengali speech AI rely on fine-tuning massive, pre-trained 
+multilingual models, which are computationally expensive and not optimized specifically 
+for the linguistic nuances of Bengali. Furthermore, the immense size of these SOTA models 
+limits their deployability in resource-constrained environments. This research addresses 
+this gap by developing an AI/ML speech foundation model specifically for Bengali, trained 
+entirely from scratch using self-supervised learning on publicly available datasets. 
+By doing so, we demonstrate that training a compact, dedicated model from scratch is not 
+only viable but can also yield highly effective representations for Bengali speech.
+
+Despite the growing interest in speech technologies, there is a significant scarcity of
+foundational speech models built from scratch for the Bengali language. Current ap-
+proaches predominantly involve fine-tuning extremely large SOTA models trained
+on other languages or multilingual corpora. This reliance on massive pre-trained
+models presents two major challenges: first, the computational cost and memory
+footprint of these models make them impractical for widespread deployment or re-
+search with limited resources; second, they often lack specialized adaptation to the
+unique phonetic and phonological characteristics of Bengali. There are currently
+no researchers who have successfully developed a small-scale, highly efficient speech
+foundation model for Bengali from scratch using self-supervised learning on public
+datasets. Therefore, there is a critical need to investigate whether a significantly
+smaller, dedicated model can be trained from scratch to achieve competitive or
+superior performance in specific metrics compared to existing heavy-weight SOTA
+models.
+
+\begin{figure}[htbp]
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{tikzpicture}[
+    node distance=1.8cm,
+    box/.style={rectangle, draw=blue!80, fill=blue!10, very thick, minimum size=10mm, text width=3.5cm, align=center, rounded corners, drop shadow},
+    encoder_box/.style={box, draw=purple!80, fill=purple!10},
+    jepa_box/.style={box, draw=orange!80, fill=orange!10},
+    reg_box/.style={box, draw=green!80, fill=green!10},
+    arrow/.style={thick,->,>=stealth, draw=black!80},
+    dashed_arrow/.style={thick,dashed,->,>=stealth, draw=black!80}
+]
+
+% Nodes
+\node[box] (input) {Raw Audio (16 kHz)};
+\node[box, below of=input] (mel) {Mel-Spectrogram Extraction};
+\node[encoder_box, below of=mel, yshift=-0.3cm] (encoder) {Context Encoder (Masked)};
+\node[encoder_box, right=0.8cm of encoder] (target) {Target Encoder (EMA)};
+\node[jepa_box, below of=encoder, yshift=-0.5cm] (jepa) {JEPA Predictor (Latent Space)};
+\node[reg_box, below of=jepa, yshift=-0.3cm] (visreg) {VISReg Regularization};
+\node[box, left=0.8cm of jepa] (clae) {Continuous Latent Autoencoder};
+
+% Arrows
+\draw[arrow] (input) -- (mel);
+\draw[arrow] (mel) -- (encoder);
+\draw[arrow] (encoder) -- (jepa);
+\draw[arrow] (mel.east) -| node[above, near start, font=\scriptsize] {Unmasked} (target.north);
+\draw[arrow] (target.south) |- (jepa.east);
+\draw[arrow] (jepa) -- (visreg);
+\draw[arrow] (encoder.west) -| (clae.north);
+\draw[dashed_arrow] (clae.south) |- (visreg.west);
+
+\end{tikzpicture}
+}
+\caption{Proposed self-supervised CLAE framework for Bengali speech representation, integrating a Joint-Embedding Predictive Architecture (JEPA) and VISReg regularization.}
+\label{fig:architecture_flowchart}
+\end{figure}
+
+To address the aforementioned challenges, our work introduces a novel learning objective that optimally combines mel-spectrogram reconstruction, JEPA-style latent space prediction, and Variance-Invariance-Covariance Regularization (VISReg), as visually outlined in \hyperref[fig:architecture_flowchart]{Figure~\ref*{fig:architecture_flowchart}}. VISReg ensures that the learned representations maintain high variance (preventing informational collapse), remain invariant to certain augmentations or masked noise, and decorrelate covariance among features, resulting in robust and disentangled speech embeddings.
+
+The primary objective of our work is to design, train, and evaluate a Continuous Latent Autoencoder (CLAE) for Bengali speech representation learning. By developing a compact speech foundation model from scratch using self-supervised learning techniques, we aim to provide a highly efficient alternative to fine-tuning large SOTA models. The specific objectives of this research are summarized as follows:
+
+\begin{itemize}
+    \item To develop a lightweight speech foundation model (a 23.8M-parameter continuous-latent autoencoder) specifically tailored for 16 kHz Bengali speech using publicly available datasets.
+    \item To demonstrate that training a model from scratch using self-supervised learning is a viable and highly effective pathway for Bengali speech research, eliminating the strict dependency on fine-tuning massive multilingual models.
+    \item To introduce a robust self-supervised objective combining JEPA and VISReg that enhances contextual understanding and feature disentanglement without relying on raw waveform reconstruction.
+    \item To evaluate the performance of the proposed compact model and show that despite its significantly small size compared to SOTA speech models, it achieves superior results in specific evaluation metrics.
+    \item To provide a robust, frame-level speech representation that can be utilized for various downstream Bengali speech analysis tasks, establishing a foundation for future research in low-resource language speech AI.
+\end{itemize}
 
 \section{Engines}
 
