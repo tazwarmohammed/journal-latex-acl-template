@@ -32,6 +32,7 @@
 \usepackage{graphicx}
 \usepackage{tikz}
 \usetikzlibrary{shapes.geometric, arrows, positioning, shadows}
+\usepackage{booktabs}
 
 % If the title and author information does not fit in the area allocated, uncomment the following
 %
@@ -201,17 +202,48 @@ The primary objective of our work is to design, train, and evaluate a Continuous
     \item To provide a robust, frame-level speech representation that can be utilized for various downstream Bengali speech analysis tasks, establishing a foundation for future research in low-resource language speech AI.
 \end{itemize}
 
-\section{Engines}
+\section{Related Work}
 
-To produce a PDF file, pdf\LaTeX{} is strongly recommended (over original \LaTeX{} plus dvips+ps2pdf or dvipdf).
-The style file \texttt{acl.sty} can also be used with
-lua\LaTeX{} and
-Xe\LaTeX{}, which are especially suitable for text in non-Latin scripts.
-The file \texttt{acl\_lualatex.tex} in this repository provides
-an example of how to use \texttt{acl.sty} with either
-lua\LaTeX{} or
-Xe\LaTeX{}.
+\subsection{Global Advancements in Speech Foundation Models}
+The trajectory of speech processing has been radically altered by self-supervised learning (SSL) models, which leverage vast amounts of unannotated audio. Foundational works such as wav2vec 2.0 \citep{baevski2020wav2vec} introduced contrastive learning over quantized representations, setting a new benchmark on English datasets like LibriSpeech. Building upon this, HuBERT \citep{hsu2021hubert} proposed an offline clustering approach (k-means) to generate pseudo-labels for masked prediction, significantly improving representation quality across diverse speech tasks. WavLM \citep{chen2022wavlm} further pushed the boundaries by incorporating denoising objectives alongside masked speech prediction, yielding state-of-the-art results on full-stack speech processing tasks. While these models primarily focused on high-resource languages like English, recent initiatives like the Massively Multilingual Speech (MMS) project \citep{pratap2023mms} have scaled wav2vec 2.0 architectures to over 1,000 languages using more than 500,000 hours of audio. Despite these global advancements, massively multilingual models often allocate a fraction of their capacity to specific low-resource languages, leading to suboptimal performance compared to dedicated, language-specific models.
 
+\subsection{Bengali Speech Recognition and Self-Supervised Learning}
+Self-supervised learning has become a dominant paradigm, but its application to low-resource languages like Bengali remains an active area of investigation. Recent studies have predominantly relied on fine-tuning massive multilingual foundation models. For instance, \citet{Shahgir2022} fine-tuned the pre-trained wav2vec 2.0 model on the Bengali Common Voice dataset for Automatic Speech Recognition (ASR), demonstrating significant improvements over traditional models. Further extending this approach, \citet{Rakib2022} demonstrated that fine-tuning wav2vec 2.0 on the extensive Common Voice 9.0 corpus and coupling it with an n-gram language model as a post-processor yields robust ASR improvements. Similarly, \citet{Zhu2023} highlighted the convergence of fine-tuned wav2vec 2.0 models for Bengali speech, tuning dropout and learning rate parameters to achieve low Word Error Rates on consolidated datasets. \citet{Deb2023} utilized wav2vec 2.0 in a multimodal framework combined with text translation models for recognizing Bengali speech acts. While these approaches show the efficacy of SSL features, they still depend on resource-heavy models pre-trained primarily on high-resource languages. 
+
+Addressing dialectal variation and long-form speech, \citet{Dipto2025} developed the Ben-10 corpus to evaluate speech foundation models on Bengali regional dialects, highlighting that existing models struggle significantly in zero-shot and fine-tuned settings when faced with regional nuances. In parallel, \citet{Dhar2026} proposed context-aware windowing strategies utilizing Whisper Medium models for ASR and speaker diarization in Bengali long-form conversational audio. These works underscore the necessity for dedicated, language-specific models. Unlike these works, our approach focuses on training a lightweight foundation model entirely from scratch exclusively on Bengali speech.
+
+\subsection{Cross-Lingual and Typologically Diverse Applications}
+While foundational models are often evaluated on high-resource languages, testing their limits on typologically diverse or phonetically distinct languages yields crucial insights into their representational capabilities. For instance, \citet{Vyas2021} explored out-of-domain adaptation of wav2vec 2.0 acoustic models using both Connectionist Temporal Classification (CTC) and Lattice-Free Maximum Mutual Information (LF-MMI) criteria, highlighting significant improvements for cross-lingual scenarios like Swahili and Tagalog. In Mandarin, which relies heavily on suprasegmental features, \citet{delaFuente2024} demonstrated that SSL speech models like HuBERT and wav2vec 2.0 successfully learn contextual representations of abstract suprasegmental categories like lexical tone, though their performance is strongly tied to the language of their training data. Furthermore, \citet{Zaatiti2025} applied wav2vec 2.0 to evaluate Arabic pronunciation at the isolated letter level, revealing that while standard models struggle with pharyngealized consonants lacking lexical context, fine-tuning augmented with adversarial training substantially stabilizes and improves phonetic classification. These diverse linguistic applications emphasize that while multilingual SSL models serve as powerful baselines, nuanced phonetic or suprasegmental phenomena frequently demand tailored training or adaptation strategies.
+
+\subsection{Joint-Embedding Predictive Architectures in Audio}
+The Joint-Embedding Predictive Architecture (JEPA), initially introduced for vision tasks to predict latent representations of masked regions, has recently been adapted for audio. \citet{Tuncay2025} proposed Audio-JEPA, which leverages a Vision Transformer backbone to predict latent representations of masked mel-spectrogram patches, achieving performance comparable to wav2vec 2.0 with significantly less training data. Our work builds upon this promising paradigm by adapting JEPA principles specifically for a continuous latent autoencoder tailored to the phonetic properties of Bengali, further stabilized by Variance-Invariance-Covariance Regularization (VISReg).
+
+\subsection{Summary of Relevant Studies}
+\hyperref[tab:related_work]{Table~\ref*{tab:related_work}} summarizes recent benchmark studies relevant to our domain, contrasting their methodologies, target languages, loss functions, and performance outcomes.
+
+\begin{table*}[htbp]
+\centering
+\resizebox{\textwidth}{!}{
+\begin{tabular}{@{}p{2.5cm}p{3cm}p{3.5cm}p{2cm}p{3.5cm}p{4cm}@{}}
+\toprule
+\textbf{Study} & \textbf{Architecture} & \textbf{Dataset} & \textbf{Language} & \textbf{Loss / Objective} & \textbf{Key Contribution} \\
+\midrule
+\citet{baevski2020wav2vec} & wav2vec 2.0 & LibriSpeech (960h) & English & Contrastive Loss & 1.8/3.3 WER on clean/other. \\
+\citet{hsu2021hubert} & HuBERT & LibriSpeech (960h) & English & Masked Prediction (k-means) & Superior on SUPERB. \\
+\citet{chen2022wavlm} & WavLM & Mix 94k hours & English & Masked Pred. + Denoising & SOTA on full-stack tasks. \\
+\citet{pratap2023mms} & MMS (wav2vec 2.0) & 500k hours & 1,000+ & Contrastive Loss & Halved WER vs prior SOTA. \\
+\citet{Shahgir2022} & wav2vec 2.0 (FT) & Bengali Common Voice & Bengali & CTC Loss & 2.6 Levenshtein Distance. \\
+\citet{delaFuente2024} & wav2vec 2.0 / HuBERT & Monolingual Corpora & Mandarin & Masked Prediction & Strong suprasegmental encoding. \\
+\citet{Vyas2021} & wav2vec 2.0 (FT) & Babel & Swahili & CTC / LF-MMI & High relative WER improvement. \\
+\citet{Zaatiti2025} & wav2vec 2.0 (FT) & Arabic Letters Corpus & Arabic & Adversarial Training & Robust phoneme classification. \\
+\citet{Dipto2025} & Multilingual Models & Ben-10 (78h) & Bengali & - & High WER on dialects. \\
+\citet{Tuncay2025} & Audio-JEPA & AudioSet & English & Patch Latent Prediction & Competitive with wav2vec 2.0. \\
+\bottomrule
+\end{tabular}
+}
+\caption{Summary of foundational and recent benchmark studies comparing architectures, datasets, objectives, target languages, and key results.}
+\label{tab:related_work}
+\end{table*}
 \section{Preamble}
 
 The first line of the file must be
