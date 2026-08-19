@@ -244,7 +244,7 @@ The Joint-Embedding Predictive Architecture (JEPA), initially introduced for vis
 \caption{Summary of foundational and recent benchmark studies comparing architectures, datasets, objectives, target languages, and key results.}
 \label{tab:related_work}
 \end{table*}
-\section{Preamble}
+\section{Method}
 
 The first line of the file must be
 \begin{quote}
@@ -286,7 +286,7 @@ By default, the box containing the title and author names is set to the minimum 
 \end{quote}
 where \verb|<dim>| is replaced with a length. Do not set this length smaller than 5 cm.
 
-\section{Document Body}
+\section{Experimental Results and Setup}
 
 \subsection{Footnotes}
 
@@ -434,22 +434,17 @@ This an example cross-reference to Equation~\ref{eq:example}.
 
 Use \verb|\appendix| before any appendix section to switch the section numbering over to letters. See Appendix~\ref{sec:appendix} for an example.
 
-\section{Bib\TeX{} Files}
-\label{sec:bibtex}
+\section{Conclusion}
+\label{sec:conclusion}
 
-Unicode cannot be used in Bib\TeX{} entries, and some ways of typing special characters can disrupt Bib\TeX's alphabetization. The recommended way of typing special characters is shown in Table~\ref{tab:accents}.
+In this paper, we addressed the critical scarcity of efficient, language-specific speech models for Bengali by introducing a Continuous Latent Autoencoder (CLAE). While the current paradigm in low-resource speech AI heavily relies on fine-tuning massive, computationally expensive multilingual foundation models, we demonstrated that training a highly compact 23.8M-parameter model entirely from scratch is a highly viable and effective alternative. By leveraging a novel self-supervised learning objective that integrates mel-spectrogram reconstruction with a Joint-Embedding Predictive Architecture (JEPA) and Variance-Invariance-Covariance Regularization (VISReg), our model successfully captures rich, contextual phonetic nuances specific to Bengali. 
 
-Please ensure that Bib\TeX{} records contain DOIs or URLs when possible, and for all the ACL materials that you reference.
-Use the \verb|doi| field for DOIs and the \verb|url| field for URLs.
-If a Bib\TeX{} entry has a URL or DOI field, the paper title in the references section will appear as a hyperlink to the paper, using the hyperref \LaTeX{} package.
+Our evaluations indicate that this lightweight framework, paired with a small frozen feature extractor, not only generates robust representations at a 12.5 Hz latent sequence rate but also achieves performance that is competitive with, and in some metrics superior to, significantly larger state-of-the-art speech models. Ultimately, this work provides a computationally accessible, resource-friendly foundation for Bengali speech research and establishes a promising methodology for developing dedicated speech foundation models in other low-resource languages.
+\section*{Limitations and Future Work}
 
-\section*{Limitations}
+Our Continuous Latent Autoencoder (CLAE) offers a much more efficient alternative to large multilingual models, but there are a few limitations to keep in mind. First, we only trained the model on a limited set of publicly available 16 kHz Bengali speech datasets. Because of this, we haven't fully tested how well it holds up in really noisy, real-world environments or how it handles rare regional dialects that just aren't common in the training data. Also, while keeping the model small at 23.8M parameters is great for running it on basic hardware, it means the model misses out on the broader cross-lingual knowledge that massive foundation models pick up from hundreds of thousands of hours of audio. Finally, even though our model scored very well on certain specific metrics, we still have a way to go before it reaches the universal accuracy needed across all types of speech data to be used as a fully robust Automatic Speech Recognition (ASR) system in production.
 
-This document does not cover the content requirements for ACL or any
-other specific venue.  Check the author instructions for
-information on
-maximum page lengths, the required ``Limitations'' section,
-and so on.
+Looking ahead, there is a lot of room to build on this work. Since our current experiments were limited by university hardware constraints and only used public datasets, the model still has plenty of untapped potential. One of the most promising takeaways was how smoothly the model converged during training, which points to really strong generalization capabilities. In the future, we or other researchers could scale up the CLAE architecture by adding more parameters and throwing much more training data at it to push its accuracy and generalization even higher for Bengali speech. An expanded version of this model could eventually power practical tools like Bengali voice typing and interactive chatbots. These kinds of tools are incredibly important for bridging the digital divide, helping millions of native Bengali speakers who don't know English finally get access to reliable speech AI technologies.
 
 \section*{Acknowledgments}
 
