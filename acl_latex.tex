@@ -33,6 +33,7 @@
 \usepackage{tikz}
 \usetikzlibrary{shapes.geometric, arrows, positioning, shadows}
 \usepackage{booktabs}
+\usepackage{amsmath}
 
 % If the title and author information does not fit in the area allocated, uncomment the following
 %
@@ -242,195 +243,207 @@ The Joint-Embedding Predictive Architecture (JEPA), initially introduced for vis
 \caption{Summary of foundational and recent benchmark studies comparing architectures, datasets, objectives, target languages, and key results.}
 \label{tab:related_work}
 \end{table*}
+
+
 \section{Method}
 
-The first line of the file must be
-\begin{quote}
-\begin{verbatim}
-\documentclass[11pt]{article}
-\end{verbatim}
-\end{quote}
+In this section, we detail the proposed Continuous Latent Autoencoder (CLAE) architecture, our novel self-supervised training objective, and the comprehensive dataset and experimental setup used to train our 16 kHz Bengali speech model. The design of the CLAE prioritizes representation learning over simple audio compression, aiming to extract meaningful phonetic and acoustic features that generalize well to downstream tasks such as speech recognition and emotion classification.
 
-To load the style file in the review version:
-\begin{quote}
-\begin{verbatim}
-\usepackage[review]{acl}
-\end{verbatim}
-\end{quote}
-For the final version, omit the \verb|review| option:
-\begin{quote}
-\begin{verbatim}
-\usepackage{acl}
-\end{verbatim}
-\end{quote}
+\subsection{Model Architecture}
 
-To use Times Roman, put the following in the preamble:
-\begin{quote}
-\begin{verbatim}
-\usepackage{times}
-\end{verbatim}
-\end{quote}
-(Alternatives like txfonts or newtx are also acceptable.)
+The CLAE model is meticulously designed to extract a compact, frame-level representation for downstream speech analysis, rather than acting solely as a deployment audio codec. As illustrated in Figure~\ref{fig:detailed_architecture}, the frozen feature extractor consists of a convolutional frontend and a FastConformer encoder, totaling 15.29M parameters. This module emits a continuous 256-dimensional sequence at a heavily downsampled rate of 12.5 frames per second. 
 
-Please see the \LaTeX{} source of this document for comments on other packages that may be useful.
+The rationale behind choosing a continuous latent space over a discrete one (such as those used in VQ-WAV2VEC or HuBERT) is to preserve fine-grained acoustic information that might otherwise be lost during quantization. The frontend acts as a powerful acoustic feature extractor, processing the raw 16 kHz waveform into a sequence of higher-level acoustic embeddings. These embeddings are then passed to the FastConformer encoder, which models long-range global context efficiently through its attention mechanisms and convolution modules. The output of the encoder is the primary continuous latent representation, $z$, which serves as the core feature for all subsequent downstream evaluations. 
 
-Set the title and author using \verb|\title| and \verb|\author|. Within the author list, format multiple authors using \verb|\and| and \verb|\And| and \verb|\AND|; please see the \LaTeX{} source for examples.
+\begin{figure*}[htbp]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+    font=\huge,
+    node distance=2.5cm and 2.5cm,
+    box/.style={rectangle, draw=blue!80, fill=blue!5, line width=2pt, minimum size=15mm, text width=6cm, align=center, rounded corners=3mm, drop shadow},
+    frontend_box/.style={box, draw=teal!80, fill=teal!10},
+    encoder_box/.style={box, draw=purple!80, fill=purple!10},
+    projector_box/.style={box, draw=orange!80, fill=orange!10},
+    decoder_box/.style={box, draw=green!80, fill=green!10},
+    loss_box/.style={circle, draw=red!80, fill=red!10, line width=2pt, inner sep=6pt, drop shadow, text width=2cm, align=center},
+    arrow/.style={line width=2pt,->,>=stealth, draw=black!80, rounded corners=2mm},
+    dashed_arrow/.style={line width=2pt,dashed,->,>=stealth, draw=black!80, rounded corners=2mm}
+]
 
-By default, the box containing the title and author names is set to the minimum of 5 cm. If you need more space, include the following in the preamble:
-\begin{quote}
-\begin{verbatim}
-\setlength\titlebox{<dim>}
-\end{verbatim}
-\end{quote}
-where \verb|<dim>| is replaced with a length. Do not set this length smaller than 5 cm.
+% Nodes
+\node[box] (input) {Input waveform $x$\\ (16 kHz)};
+\node[frontend_box, right=of input] (frontend) {Conv1D frontend \\ 5 stages $\cdot$ stride 1280 \\ 12.5 frames/s};
+\node[box, right=of frontend] (masking) {Frame \\ span \\ mask};
+\node[encoder_box, right=of masking] (encoder) {FastConformer encoder \\ 8 layers + mHC \\ $z$: 256-D continuous latent};
 
-\section{Experimental Results and Setup}
+\node[box, above=of frontend, yshift=-0.5cm] (augmentation) {View augmentation \\ 2 global + 4 local views \\ augmentation / noise};
 
-\subsection{Footnotes}
+\node[projector_box, above right=0.5cm and 2cm of encoder] (projector) {Projector \\ $p$ branch \\ $256 \rightarrow 512 \rightarrow 64$};
+\node[decoder_box, below right=0.5cm and 2cm of encoder] (decoder) {Decoder-input corruption \\ span mask + Gaussian noise};
+\node[decoder_box, right=of decoder] (film) {FiLM waveform \\ decoder};
+\node[box, right=of film] (reconstructed) {Reconstructed \\ waveform $\hat{x}$};
 
-Footnotes are inserted with the \verb|\footnote| command.\footnote{This is a footnote.}
+\node[loss_box, right=of projector, yshift=1.5cm] (ljepa) {$\mathcal{L}_{\text{JEPA}}$};
+\node[loss_box, right=of projector, yshift=-1.5cm] (lvisreg) {$\mathcal{L}_{\text{VISReg}}$};
+\node[loss_box, right=of reconstructed] (lmel) {$\mathcal{L}_{\text{mel}}$};
+\node[box, below=4.5cm of encoder, text width=6cm] (target) {Clean target};
 
-\subsection{Tables and figures}
+% Arrows
+\draw[arrow] (input) -- (augmentation);
+\draw[arrow] (augmentation) -- (frontend);
+\draw[arrow] (input) -- (frontend);
+\draw[arrow] (frontend) -- (masking);
+\draw[arrow] (masking) -- (encoder);
 
-See Table~\ref{tab:accents} for an example of a table and its caption.
-\textbf{Do not override the default caption sizes.}
+\draw[arrow] (encoder.east) -- ++(1.0,0) |- (projector.west) node[pos=0.25, above, font=\huge] {$p$ branch};
+\draw[arrow] (encoder.east) -- ++(1.0,0) |- (decoder.west) node[pos=0.25, below, font=\huge] {$z$};
 
-\begin{table}
-  \centering
-  \begin{tabular}{lc}
-    \hline
-    \textbf{Command} & \textbf{Output} \\
-    \hline
-    \verb|{\"a}|     & {\"a}           \\
-    \verb|{\^e}|     & {\^e}           \\
-    \verb|{\`i}|     & {\`i}           \\
-    \verb|{\.I}|     & {\.I}           \\
-    \verb|{\o}|      & {\o}            \\
-    \verb|{\'u}|     & {\'u}           \\
-    \verb|{\aa}|     & {\aa}           \\\hline
-  \end{tabular}
-  \begin{tabular}{lc}
-    \hline
-    \textbf{Command} & \textbf{Output} \\
-    \hline
-    \verb|{\c c}|    & {\c c}          \\
-    \verb|{\u g}|    & {\u g}          \\
-    \verb|{\l}|      & {\l}            \\
-    \verb|{\~n}|     & {\~n}           \\
-    \verb|{\H o}|    & {\H o}          \\
-    \verb|{\v r}|    & {\v r}          \\
-    \verb|{\ss}|     & {\ss}           \\
-    \hline
-  \end{tabular}
-  \caption{Example commands for accented characters, to be used in, \emph{e.g.}, Bib\TeX{} entries.}
-  \label{tab:accents}
-\end{table}
+\draw[arrow] (projector.east) -- ++(0.75,0) |- (ljepa.west);
+\draw[arrow] (projector.east) -- ++(0.75,0) |- (lvisreg.west);
 
-As much as possible, fonts in figures should conform
-to the document fonts. See Figure~\ref{fig:experiments} for an example of a figure and its caption.
+\draw[arrow] (decoder) -- (film);
+\draw[arrow] (film) -- (reconstructed);
+\draw[arrow] (reconstructed) -- (lmel);
 
-Using the \verb|graphicx| package graphics files can be included within figure
-environment at an appropriate point within the text.
-The \verb|graphicx| package supports various optional arguments to control the
-appearance of the figure.
-You must include it explicitly in the \LaTeX{} preamble (after the
-\verb|\documentclass| declaration and before \verb|\begin{document}|) using
-\verb|\usepackage{graphicx}|.
+\draw[dashed_arrow] (target.west) -| (input.south);
+\draw[dashed_arrow] (target.east) -| (lmel.south);
 
-\begin{figure}[t]
-  \includegraphics[width=\columnwidth]{example-image-golden}
-  \caption{A figure with a caption that runs for more than one line.
-    Example image is usually available through the \texttt{mwe} package
-    without even mentioning it in the preamble.}
-  \label{fig:experiments}
-\end{figure}
-
-\begin{figure*}[t]
-  \includegraphics[width=0.48\linewidth]{example-image-a} \hfill
-  \includegraphics[width=0.48\linewidth]{example-image-b}
-  \caption {A minimal working example to demonstrate how to place
-    two images side-by-side.}
+\end{tikzpicture}
+}
+\caption{Detailed architecture of the Continuous Latent Autoencoder (CLAE). The clean input provides the reconstruction target. Augmented views pass through the frontend, frame masking, and encoder before branching into the representation ($p$) and waveform-reconstruction ($z$) objectives.}
+\label{fig:detailed_architecture}
 \end{figure*}
 
-\subsection{Hyperlinks}
+\subsection{Training Objective}
 
-Users of older versions of \LaTeX{} may encounter the following error during compilation:
-\begin{quote}
-\verb|\pdfendlink| ended up in different nesting level than \verb|\pdfstartlink|.
-\end{quote}
-This happens when pdf\LaTeX{} is used and a citation splits across a page boundary. The best way to fix this is to upgrade \LaTeX{} to 2018-12-01 or later.
-
-\subsection{Citations}
-
-\begin{table*}
-  \centering
-  \begin{tabular}{lll}
-    \hline
-    \textbf{Output}           & \textbf{natbib command} & \textbf{ACL only command} \\
-    \hline
-    \citep{Gusfield:97}       & \verb|\citep|           &                           \\
-    \citealp{Gusfield:97}     & \verb|\citealp|         &                           \\
-    \citet{Gusfield:97}       & \verb|\citet|           &                           \\
-    \citeyearpar{Gusfield:97} & \verb|\citeyearpar|     &                           \\
-    \citeposs{Gusfield:97}    &                         & \verb|\citeposs|          \\
-    \hline
-  \end{tabular}
-  \caption{\label{citation-guide}
-    Citation commands supported by the style file.
-    The style is based on the natbib package and supports all natbib citation commands.
-    It also supports commands defined in previous ACL style files for compatibility.
-  }
-\end{table*}
-
-Table~\ref{citation-guide} shows the syntax supported by the style files.
-We encourage you to use the natbib styles.
-You can use the command \verb|\citet| (cite in text) to get ``author (year)'' citations, like this citation to a paper by \citet{Gusfield:97}.
-You can use the command \verb|\citep| (cite in parentheses) to get ``(author, year)'' citations \citep{Gusfield:97}.
-You can use the command \verb|\citealp| (alternative cite without parentheses) to get ``author, year'' citations, which is useful for using citations within parentheses (e.g. \citealp{Gusfield:97}).
-
-A possessive citation can be made with the command \verb|\citeposs|.
-This is not a standard natbib command, so it is generally not compatible
-with other style files.
-
-\subsection{References}
-
-\nocite{Ando2005,andrew2007scalable,rasooli-tetrault-2015}
-
-The \LaTeX{} and Bib\TeX{} style files provided roughly follow the American Psychological Association format.
-If your own bib file is named \texttt{custom.bib}, then placing the following before any appendices in your \LaTeX{} file will generate the references section for you:
-\begin{quote}
-\begin{verbatim}
-\bibliography{custom}
-\end{verbatim}
-\end{quote}
-
-You can obtain the complete ACL Anthology as a Bib\TeX{} file from \url{https://aclweb.org/anthology/anthology.bib.gz}.
-To include both the Anthology and your own .bib file, use the following instead of the above.
-\begin{quote}
-\begin{verbatim}
-\bibliography{anthology,custom}
-\end{verbatim}
-\end{quote}
-
-Please see Section~\ref{sec:bibtex} for information on preparing Bib\TeX{} files.
-
-\subsection{Equations}
-
-An example equation is shown below:
+Given an input waveform $x$, the model learns a continuous encoder representation $z$ from which a decoder attempts to reconstruct the clean speech signal. To explicitly decouple the downstream representation from the space heavily constrained by the self-supervised contrastive losses, we introduce a separate projector network that maps $z$ into a secondary representation $p$. The overall objective is formalized as a weighted sum of three distinct loss components, designed to balance acoustic fidelity with abstract semantic representation:
 \begin{equation}
-  \label{eq:example}
-  A = \pi r^2
+  \mathcal{L}_{\text{total}} = 1.0 \mathcal{L}_{\text{mel}} + 0.3 \mathcal{L}_{\text{JEPA}} + 0.7 \mathcal{L}_{\text{VISReg}}
+  \label{eq:objective}
 \end{equation}
 
-Labels for equation numbers, sections, subsections, figures and tables
-are all defined with the \verb|\label{label}| command and cross references
-to them are made with the \verb|\ref{label}| command.
+The individual components of this objective function operate as follows:
+\begin{itemize}
+    \item \textbf{Mel Reconstruction ($\mathcal{L}_{\text{mel}}$):} This term ensures that the latent space retains sufficient acoustic information to generate speech. It compares the reconstructed audio $\hat{x}$ with the clean target waveform in an 80-bin log-mel domain, utilizing an FFT window size of 1024 and a hop size of 256. To prevent the autoencoder from learning a trivial identity mapping, the decoder input is forcefully regularized using latent span masking and the addition of Gaussian noise.
+    \item \textbf{JEPA Consistency ($\mathcal{L}_{\text{JEPA}}$):} The Joint-Embedding Predictive Architecture (JEPA) loss enforces consistency across multiple augmented views of the same audio segment. We employ two global views and four local augmented views. The global projector features define a per-frame contextual center, and the network is penalized using mean-square error (MSE) when local features deviate from this global center. This teaches the model to ignore background noise and focus on the underlying phonetic content.
+    \item \textbf{VISReg Regularization ($\mathcal{L}_{\text{VISReg}}$):} The Variance-Invariance-Covariance Regularization term is critical for preventing representation collapse—a common failure mode in non-contrastive self-supervised learning where all inputs map to a single constant vector. VISReg applies 256 random projections to the pooled projector features, actively encouraging a centered, unit-scale, and isotropic Gaussian-like geometry in the latent space.
+\end{itemize}
+It is important to note that traditional adversarial and feature-matching losses, often used in generative audio models (such as GAN-based vocoders), were explicitly disabled for this architecture. Empirical testing revealed that these adversarial objectives occasionally introduced instability during the early stages of representation learning and did not significantly improve the quality of the frozen features for downstream classification tasks.
 
-This an example cross-reference to Equation~\ref{eq:example}.
+\subsection{Dataset}
 
-\subsection{Appendices}
+To ensure the model learns robust and generalized phonetic structures, it is trained entirely from scratch on a massive compilation of four major Bengali speech corpora. This combined dataset contains a total of 1,310,076 utterances, equating to approximately 2,000 total hours of audio data. The datasets were selected to cover a wide variance in recording conditions, speaker demographics, and dialects. A detailed breakdown of the datasets and their respective utterance counts is provided in Table~\ref{tab:dataset_stats}. 
 
-Use \verb|\appendix| before any appendix section to switch the section numbering over to letters. See Appendix~\ref{sec:appendix} for an example.
+\begin{table}[htbp]
+\centering
+\begin{tabular}{lr}
+\toprule
+\textbf{Dataset} & \textbf{Utterances} \\
+\midrule
+Common Voice Bengali & 1,052,178 \\
+OpenSLR-53 & 218,703 \\
+regspeech12 & 21,313 \\
+shrutilipi & 17,882 \\
+\midrule
+\textbf{Total} & \textbf{1,310,076} \\
+\midrule
+Train Split & 1,244,572 \\
+Validation Split & 65,504 \\
+\bottomrule
+\end{tabular}
+\caption{Statistics of the Bengali speech datasets utilized for training the CLAE model. The combination of crowdsourced data (Common Voice), regional speech (regspeech12), and audiobooks (shrutilipi) ensures a high degree of acoustic diversity.}
+\label{tab:dataset_stats}
+\end{table}
+
+The \textit{Common Voice Bengali} corpus forms the backbone of the dataset, providing over a million utterances of highly diverse, crowdsourced speech. \textit{OpenSLR-53} contributes high-quality read speech, while \textit{regspeech12} and \textit{shrutilipi} introduce regional dialectal variations and formal audiobook-style prosody, respectively. This combination is crucial for training a foundation model capable of handling real-world, unconstrained Bengali audio.
+
+\subsection{Experimental Setup}
+
+The 23.8M-parameter CLAE model consists of four highly optimized sub-components, carefully sized to balance representational power with inference efficiency. A summary of the architectural hyperparameters and parameter counts is provided in Table~\ref{tab:architecture_hyperparams}.
+
+\begin{table}[htbp]
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{@{}llrp{3.8cm}@{}}
+\toprule
+\textbf{Component} & \textbf{Architecture} & \textbf{Params} & \textbf{Key Configuration} \\
+\midrule
+Frontend & Conv1D & 2.89M & 5 stages, channels [128-512], strides [5,4,4,4,4] \\
+Encoder & FastConformer & 12.40M & 8 layers, $d=256$, 8 heads, 9-tap conv \\
+Projector & MLP & 0.17M & $256 \rightarrow 512 \rightarrow 64$ \\
+Decoder & FiLM Residual & 8.34M & 768 init channels, strides [4,4,4,4,5] \\
+\midrule
+\textbf{Total} & \textbf{CLAE} & \textbf{23.80M} & \textbf{Downsamples 16 kHz to 12.5 Hz} \\
+\bottomrule
+\end{tabular}
+}
+\caption{Summary of the architectural hyperparameters and parameter distribution across the CLAE components.}
+\label{tab:architecture_hyperparams}
+\end{table}
+
+The frontend is a five-stage Conv1D architecture designed to aggressively downsample the raw audio. It applies convolutional kernels of sizes 10, 8, 8, 4, 4, with corresponding strides of 5, 4, 4, 4, 4. The cumulative stride is $5 \times 4 \times 4 \times 4 \times 4 = 1280$ samples. For a 16 kHz input, this results in exactly 12.5 frames per second (or one latent frame every 80 ms). The frontend relies on GroupNorm and GELU activations for stable gradient flow.
+
+The core reasoning engine is an eight-layer FastConformer block with a hidden dimension of $d=256$, utilizing 8 attention heads and a Feed-Forward Network (FFN) dimension of 1024. It employs 9-tap depthwise convolutions, a dropout rate of 0.1, and squeeze-and-excitation modules. Additionally, a two-stream multi-Head Convolution (mHC) mixing strategy is integrated at zero-indexed layers 2 and 5 to better fuse local and global context.
+
+The training configuration was optimized for stability over long horizons. We utilized a base batch size of 42 distributed over four gradient-accumulation steps, yielding an effective batch size of 168. We trained using 3-second audio segments randomly cropped during data loading. The network was optimized using AdamW with BF16 mixed precision to reduce VRAM consumption. We applied a gradient clipping threshold of 1.0 to prevent explosive gradients, and scheduled the learning rate using a 5,000-step warm-up phase followed by a cosine decay curve. 
+
+The primary evaluated model was trained for a total of 170,000 optimizer steps. We tracked the training progress closely via Weights \& Biases (\texttt{wandb}). During the training lifecycle, an interim recovery run was initialized from a step-50,000 checkpoint to transition to a packed-data TAR loader format. During this recovery phase, the base learning rate was manually adjusted from $1\text{e-}3$ down to $5\text{e-}4$ to stabilize the scheduler reconstruction. Under the documented effective batch size and segment length, 170,000 steps correspond to processing 28.56 million training samples. This equates to approximately 23,800 audio hours, representing nearly 23 effective epochs of exposure to the dataset.
+
+\subsection{Pre-processing and View Augmentation Strategy}
+
+To effectively leverage the Joint-Embedding Predictive Architecture (JEPA), our framework relies on a sophisticated view augmentation strategy that operates directly on the input representations. Rather than relying on simple frame masking, we dynamically generate multiple perspectives of the same underlying speech signal to encourage the model to learn invariant, high-level semantic features rather than over-fitting to localized acoustic noise.
+
+\begin{figure*}[htbp]
+\centering
+\resizebox{0.8\textwidth}{!}{%
+\begin{tikzpicture}[
+    font=\Large,
+    node distance=1.5cm and 2cm,
+    box/.style={rectangle, draw=gray!80, fill=gray!10, very thick, minimum size=12mm, text width=5cm, align=center, rounded corners},
+    view_global/.style={rectangle, draw=blue!80, fill=blue!10, very thick, minimum size=12mm, text width=4cm, align=center, rounded corners},
+    view_local/.style={rectangle, draw=orange!80, fill=orange!10, very thick, minimum size=12mm, text width=4cm, align=center, rounded corners},
+    arrow/.style={ultra thick,->,>=stealth}
+]
+
+% Input at the top
+\node[box, text width=6cm] (input) {Input Speech Segment};
+
+% Global views on the left
+\node[view_global, below left=1.5cm and 1cm of input] (global2) {Global View 2 \\ (Broad Context)};
+\node[view_global, left=0.5cm of global2] (global1) {Global View 1 \\ (Broad Context)};
+
+% Local views on the right
+\node[view_local, below right=1.5cm and 1cm of input] (local1) {Local View 1 \\ (Narrow Span)};
+\node[view_local, right=0.5cm of local1] (local2) {Local View 2 \\ (Narrow Span)};
+\node[right=0.2cm of local2] (dots) {\Huge ...};
+
+% Target and Online Reps
+\node[box, below=2.5cm of global2, xshift=-2.25cm] (target) {Target Representation \\ (Global Center)};
+\node[box, below=2.5cm of local1, xshift=2.25cm] (online) {Online Representations \\ (Local/Global)};
+
+% Arrows from input to views
+\draw[arrow] (input.south) -- ++(0,-0.5) -| (global1.north);
+\draw[arrow] (input.south) -- ++(0,-0.5) -| (global2.north);
+\draw[arrow] (input.south) -- ++(0,-0.5) -| (local1.north);
+\draw[arrow] (input.south) -- ++(0,-0.5) -| (local2.north);
+
+% Arrows from views to reps
+\draw[arrow] (global1.south) -- ++(0,-0.5) -| (target.north);
+\draw[arrow] (global2.south) -- ++(0,-0.5) -| (target.north);
+\draw[arrow] (local1.south) -- ++(0,-0.5) -| (online.north);
+\draw[arrow] (local2.south) -- ++(0,-0.5) -| (online.north);
+
+% MSE Loss
+\draw[<->, ultra thick, red, dashed] (target.east) -- (online.west) node[midway, above] {MSE Loss ($\mathcal{L}_{\text{JEPA}}$)};
+
+\end{tikzpicture}
+}
+\caption{Visualization of the JEPA Consistency strategy. Two broad global views establish a target contextual center, while multiple narrow local views are explicitly driven toward this center via an MSE loss.}
+\label{fig:jepa_views}
+\end{figure*}
+
+As illustrated in Figure~\ref{fig:jepa_views}, the input speech segment is transformed into two broad ``global'' views and four narrow ``local'' views. The global views encompass a wider temporal context, allowing the projector network to establish a stable, context-rich target center. Conversely, the local views capture short, highly localized acoustic spans. By minimizing the Mean Squared Error (MSE) between the representations of the local views and the target center of the global views, the model is explicitly trained to predict the overarching phonetic structure from limited, potentially noisy partial observations. This view-based regularization fundamentally underpins the model's robustness to varying acoustic conditions and speaker characteristics in the Bengali corpora.
 
 \section{Conclusion}
 \label{sec:conclusion}
@@ -473,7 +486,7 @@ Additional elements were taken from the formatting instructions of the \emph{Int
 
 \appendix
 
-\section{Example Appendix}
+\section{Appendix}
 \label{sec:appendix}
 
 This is an appendix.
