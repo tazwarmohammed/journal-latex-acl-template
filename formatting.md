@@ -249,26 +249,25 @@ Gather the full set of references together under the unnumbered section heading 
 Place the References section before any Appendices.
 Arrange the references alphabetically by first author, rather than by order of occurrence in the text.
 
-Provide as complete a citation as possible, using a consistent format, such as the [one for Computational Linguistics](http://cljournal.org/style_guide_refs.html) or the one in the [Publication Manual of the American Psychological Association](https://apastyle.apa.org/products/publication-manual-7th-edition).
-Use full names for authors, not just initials.
-Authors should not rely on automated citation indices to provide accurate references for prior and related work.
+Provide as complete a citation as possible, using a consistent format. The provided \LaTeX{} template automatically formats your bibliography using the `acl_natbib` style, which perfectly matches the required format for the Transactions of the Association for Computational Linguistics (TACL) and other ACL venues.
+
+Use full names for authors, not just initials. Authors should not rely on automated citation indices to provide accurate references for prior and related work.
 
 As part of our work to make ACL materials more widely used and cited outside of our discipline, ACL has registered as a CrossRef member, as a registrant of Digital Object Identifiers (DOIs), the standard for registering permanent URNs for referencing scholarly materials.
 
-All references are required to contain DOIs of all cited works when possible, or, as a second resort, links to ACL Anthology pages.
-Appropriate records should be found for most materials in the current [ACL Anthology](https://aclweb.org/anthology/).
+All references are required to contain DOIs of all cited works when possible, or, as a second resort, links to ACL Anthology pages. Appropriate records should be found for most materials in the current [ACL Anthology](https://aclweb.org/anthology/).
 
 Example article in a journal:
 
-> Rie Kubota Ando and Tong Zhang. 2005. [A framework for learning predictive structures from multiple tasks and unlabeled data](https://www.jmlr.org/papers/v6/ando05a.html). *Journal of Machine Learning Research*, 6:1817–1853.
+> Rie Kubota Ando and Tong Zhang. 2005. A framework for learning predictive structures from multiple tasks and unlabeled data. *Journal of Machine Learning Research*, 6:1817–1853.
 
-Example paper in non-ACL proceedings, with DOI:
+Example paper in non-ACL proceedings:
 
-> Galen Andrew and Jianfeng Gao. 2007. [Scalable training of L1-regularized log-linear models](https://doi.org/10.1145/1273496.1273501). In *Proceedings of the 24th International Conference on Machine Learning*, pages 33–40.
+> Galen Andrew and Jianfeng Gao. 2007. Scalable training of L1-regularized log-linear models. In *Proceedings of the 24th International Conference on Machine Learning*, pages 33–40.
 
-Example ACL Anthology paper with DOI:
+Example ACL Anthology paper:
 
-> James Goodman, Andreas Vlachos, and Jason Naradowsky. 2016. [Noise reduction and targeted exploration in imitation learning for Abstract Meaning Representation parsing](http://dx.doi.org/10.18653/v1/P16-1001). In *Proceedings of the 54th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)*, pages 1–45711, Berlin, Germany. Association for Computational Linguistics.
+> James Goodman, Andreas Vlachos, and Jason Naradowsky. 2016. Noise reduction and targeted exploration in imitation learning for Abstract Meaning Representation parsing. In *Proceedings of the 54th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)*, pages 1–45711, Berlin, Germany. Association for Computational Linguistics.
 
 Example ACL Anthology paper without DOI:
 
