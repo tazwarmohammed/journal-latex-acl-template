@@ -1,0 +1,273 @@
+diff --git a/acl_latex.tex b/acl_latex.tex
+index 1c8b298..b26ebc2 100644
+--- a/acl_latex.tex
++++ b/acl_latex.tex
+@@ -36,6 +36,7 @@
+ \usepackage{amsmath}
+ \usepackage{pgfplots}
+ \pgfplotsset{compat=1.18}
++\usepackage[nolist]{acronym}
+ 
+ % If the title and author information does not fit in the area allocated, uncomment the following
+ %
+@@ -43,7 +44,7 @@
+ %
+ % and set <dim> to something 5cm or larger.
+ 
+-\title{CLAE: Towards a Foundation Model for Bangla Speech using \acf{JEPA} and \acf{VISReg}}
++\title{CLAE: Towards a Foundation Model for Bangla Speech using JEPA and VISReg}
+ 
+ % Author information can be set in various styles:
+ % For several authors from the same institution:
+@@ -111,6 +112,10 @@
+ %}
+ 
+ \begin{document}
++\begin{acronym}
++\acro{JEPA}{Joint-Embedding Predictive Architecture}
++\acro{VISReg}{Variance-Invariance-Covariance Regularization}
++\end{acronym}
+ \maketitle
+ \begin{abstract}
+ Self-supervised learning has greatly improved speech models, but low-resource languages like Bengali still rely heavily on large, expensive multilingual models. These large models are difficult to run and often miss the specific phonetic details of Bengali. In this paper, we introduce a Continuous Latent Autoencoder (CLAE), which is an efficient 23.8M-parameter speech foundation model built from scratch for Bengali speech. We trained it on public datasets using a new self-supervised approach that combines mel-spectrogram reconstruction, Joint-Embedding Predictive Architecture (JEPA), and Variance-Invariance-Covariance Regularization (VISReg). This allows our model to create strong representations at a 12.5 Hz latent sequence rate. Even with a small 15.29M-parameter frozen feature extractor, our model performs just as well as, and sometimes better than, much larger state-of-the-art speech models. Our results show that training a small foundation model from scratch is a practical and effective way to handle low-resource speech tasks. This provides an accessible and resource-friendly option for Bengali speech research and helps set the stage for future work in similar languages.
+@@ -207,183 +212,9 @@ The primary objective of our work is to design, train, and evaluate a Continuous
+ 
+ \section{Related Work}
+ 
+-\subsection{Global Advancements in Speech Foundation Models}
+-The trajectory of speech processing has been radically altered by self-supervised learning (SSL) models, which leverage vast amounts of unannotated audio. Foundational works such as wav2vec 2.0 \citep{baevski2020wav2vec} introduced contrastive learning over quantized representations, setting a new benchmark on English datasets like LibriSpeech. Building upon this, HuBERT \citep{hsu2021hubert} proposed an offline clustering approach (k-means) to generate pseudo-labels for masked prediction, significantly improving representation quality across diverse speech tasks. WavLM \citep{chen2022wavlm} further pushed the boundaries by incorporating denoising objectives alongside masked speech prediction, yielding state-of-the-art results on full-stack speech processing tasks. While these models primarily focused on high-resource languages like English, recent initiatives like the Massively Multilingual Speech (MMS) project \citep{pratap2023mms} have scaled wav2vec 2.0 architectures to over 1,000 languages using more than 500,000 hours of audio. Despite these global advancements, massively multilingual models often allocate a fraction of their capacity to specific low-resource languages, leading to suboptimal performance compared to dedicated, language-specific models.
+-
+-\subsection{Bengali Speech Recognition and Self-Supervised Learning}
+-Self-supervised learning has become a dominant paradigm, but its application to low-resource languages like Bengali remains an active area of investigation. Recent studies have predominantly relied on fine-tuning massive multilingual foundation models. For instance, \citet{Shahgir2022} fine-tuned the pre-trained wav2vec 2.0 model on the Bengali Common Voice dataset for Automatic Speech Recognition (ASR), demonstrating significant improvements over traditional models. Further extending this approach, \citet{Rakib2022} demonstrated that fine-tuning wav2vec 2.0 on the extensive Common Voice 9.0 corpus and coupling it with an n-gram language model as a post-processor yields robust ASR improvements. Similarly, \citet{Zhu2023} highlighted the convergence of fine-tuned wav2vec 2.0 models for Bengali speech, tuning dropout and learning rate parameters to achieve low Word Error Rates on consolidated datasets. \citet{Deb2023} utilized wav2vec 2.0 in a multimodal framework combined with text translation models for recognizing Bengali speech acts. While these approaches show the efficacy of SSL features, they still depend on resource-heavy models pre-trained primarily on high-resource languages. 
+-
+-Addressing dialectal variation and long-form speech, \citet{Dipto2025} developed the Ben-10 corpus to evaluate speech foundation models on Bengali regional dialects, highlighting that existing models struggle significantly in zero-shot and fine-tuned settings when faced with regional nuances. In parallel, \citet{Dhar2026} proposed context-aware windowing strategies utilizing Whisper Medium models for ASR and speaker diarization in Bengali long-form conversational audio. These works underscore the necessity for dedicated, language-specific models. Unlike these works, our approach focuses on training a lightweight foundation model entirely from scratch exclusively on Bengali speech.
+-
+-\subsection{Cross-Lingual and Typologically Diverse Applications}
+-While foundational models are often evaluated on high-resource languages, testing their limits on typologically diverse or phonetically distinct languages yields crucial insights into their representational capabilities. For instance, \citet{Vyas2021} explored out-of-domain adaptation of wav2vec 2.0 acoustic models using both Connectionist Temporal Classification (CTC) and Lattice-Free Maximum Mutual Information (LF-MMI) criteria, highlighting significant improvements for cross-lingual scenarios like Swahili and Tagalog. In Mandarin, which relies heavily on suprasegmental features, \citet{delaFuente2024} demonstrated that SSL speech models like HuBERT and wav2vec 2.0 successfully learn contextual representations of abstract suprasegmental categories like lexical tone, though their performance is strongly tied to the language of their training data. Furthermore, \citet{Zaatiti2025} applied wav2vec 2.0 to evaluate Arabic pronunciation at the isolated letter level, revealing that while standard models struggle with pharyngealized consonants lacking lexical context, fine-tuning augmented with adversarial training substantially stabilizes and improves phonetic classification. These diverse linguistic applications emphasize that while multilingual SSL models serve as powerful baselines, nuanced phonetic or suprasegmental phenomena frequently demand tailored training or adaptation strategies. A comprehensive summary of these foundational and recent benchmark studies, contrasting their architectures, datasets, and target languages, is provided in \hyperref[tab:related_work]{Table~\ref*{tab:related_work}}.
+-
+-\subsection{Joint-Embedding Predictive Architectures in Audio}
+-The Joint-Embedding Predictive Architecture (JEPA), initially introduced for vision tasks to predict latent representations of masked regions \citep{ImageJEPA2023}, has recently been adapted for audio and sequential data \citep{DSeqJEPA2025, ConnectingJEPA2024}. \citet{Tuncay2025} proposed Audio-JEPA, which leverages a Vision Transformer backbone to predict latent representations of masked mel-spectrogram patches, achieving performance comparable to wav2vec 2.0 with significantly less training data. Recent advancements have explored soft clustering anchors \citep{SoftClusteringJEPA2026} and bi-directional representations \citep{BiJEPA2026} to prevent representation collapse and capture symmetric learning dynamics in predictive architectures. Our work builds upon this promising paradigm by adapting JEPA principles specifically for a continuous latent autoencoder tailored to the phonetic properties of Bengali, further stabilized by Variance-Invariance-Covariance Regularization (VISReg).
+-
+-
+-\begin{table*}[htbp]
+-\centering
+-\resizebox{\textwidth}{!}{
+-\begin{tabular}{@{}p{2.5cm}p{3cm}p{3.5cm}p{2cm}p{3.5cm}p{4cm}@{}}
+-\toprule
+-\textbf{Study} & \textbf{Architecture} & \textbf{Dataset} & \textbf{Language} & \textbf{Loss / Objective} & \textbf{Key Contribution} \\
+-\midrule
+-\citet{baevski2020wav2vec} & wav2vec 2.0 & LibriSpeech (960h) & English & Contrastive Loss & 1.8/3.3 WER on clean/other. \\
+-\citet{hsu2021hubert} & HuBERT & LibriSpeech (960h) & English & Masked Prediction (k-means) & Superior on SUPERB. \\
+-\citet{chen2022wavlm} & WavLM & Mix 94k hours & English & Masked Pred. + Denoising & SOTA on full-stack tasks. \\
+-\citet{pratap2023mms} & MMS (wav2vec 2.0) & 500k hours & 1,000+ & Contrastive Loss & Halved WER vs prior SOTA. \\
+-\citet{Shahgir2022} & wav2vec 2.0 (FT) & Bengali Common Voice & Bengali & CTC Loss & 2.6 Levenshtein Distance. \\
+-\citet{delaFuente2024} & wav2vec 2.0 / HuBERT & Monolingual Corpora & Mandarin & Masked Prediction & Strong suprasegmental encoding. \\
+-\citet{Vyas2021} & wav2vec 2.0 (FT) & Babel & Swahili & CTC / LF-MMI & High relative WER improvement. \\
+-\citet{Zaatiti2025} & wav2vec 2.0 (FT) & Arabic Letters Corpus & Arabic & Adversarial Training & Robust phoneme classification. \\
+-\citet{Dipto2025} & Multilingual Models & Ben-10 (78h) & Bengali & - & High WER on dialects. \\
+-\citet{Tuncay2025} & Audio-JEPA & AudioSet & English & Patch Latent Prediction & Competitive with wav2vec 2.0. \\
+-\bottomrule
+-\end{tabular}
+-}
+-\caption{Summary of foundational and recent benchmark studies comparing architectures, datasets, objectives, target languages, and key results.}
+-\label{tab:related_work}
+-\end{table*}
+-
+-
+-\section{Method}
+-
+-In this section, we detail the proposed Continuous Latent Autoencoder (CLAE) architecture, our novel self-supervised training objective, and the comprehensive dataset and experimental setup used to train our 16 kHz Bengali speech model. The design of the CLAE prioritizes representation learning over simple audio compression, aiming to extract meaningful phonetic and acoustic features that generalize well to downstream tasks such as speech recognition and emotion classification.
+-
+-\subsection{Model Architecture}
+-
+-The CLAE model is meticulously designed to extract a compact, frame-level representation for downstream speech analysis, rather than acting solely as a deployment audio codec. As illustrated in Figure~\ref{fig:detailed_architecture}, the frozen feature extractor consists of a convolutional frontend and a FastConformer encoder, totaling 15.29M parameters. This module emits a continuous 256-dimensional sequence at a heavily downsampled rate of 12.5 frames per second. 
+-
+-The rationale behind choosing a continuous latent space over a discrete one (such as those used in VQ-WAV2VEC or HuBERT) is to preserve fine-grained acoustic information that might otherwise be lost during quantization. The frontend acts as a powerful acoustic feature extractor, processing the raw 16 kHz waveform into a sequence of higher-level acoustic embeddings. These embeddings are then passed to the FastConformer encoder, which models long-range global context efficiently through its attention mechanisms and convolution modules. The output of the encoder is the primary continuous latent representation, $z$, which serves as the core feature for all subsequent downstream evaluations. 
+-
+-\begin{figure*}[htbp]
+-\centering
+-\resizebox{\textwidth}{!}{%
+-\begin{tikzpicture}[
+-    font=\huge,
+-    node distance=2.5cm and 2.5cm,
+-    box/.style={rectangle, draw=blue!80, fill=blue!5, line width=2pt, minimum size=15mm, text width=6cm, align=center, rounded corners=3mm, drop shadow},
+-    frontend_box/.style={box, draw=teal!80, fill=teal!10},
+-    encoder_box/.style={box, draw=purple!80, fill=purple!10},
+-    projector_box/.style={box, draw=orange!80, fill=orange!10},
+-    decoder_box/.style={box, draw=green!80, fill=green!10},
+-    loss_box/.style={circle, draw=red!80, fill=red!10, line width=2pt, inner sep=6pt, drop shadow, text width=2cm, align=center},
+-    arrow/.style={line width=2pt,->,>=stealth, draw=black!80, rounded corners=2mm},
+-    dashed_arrow/.style={line width=2pt,dashed,->,>=stealth, draw=black!80, rounded corners=2mm}
+-]
+-
+-% Nodes
+-\node[box] (input) {Input waveform $x$\\ (16 kHz)};
+-\node[frontend_box, right=of input] (frontend) {Conv1D frontend \\ 5 stages $\cdot$ stride 1280 \\ 12.5 frames/s};
+-\node[box, right=of frontend] (masking) {Frame \\ span \\ mask};
+-\node[encoder_box, right=of masking] (encoder) {FastConformer encoder \\ 8 layers + mHC \\ $z$: 256-D continuous latent};
+-
+-\node[box, above=of frontend, yshift=-0.5cm] (augmentation) {View augmentation \\ 2 global + 4 local views \\ augmentation / noise};
+-
+-\node[projector_box, above right=0.5cm and 2cm of encoder] (projector) {Projector \\ $p$ branch \\ $256 \rightarrow 512 \rightarrow 64$};
+-\node[decoder_box, below right=0.5cm and 2cm of encoder] (decoder) {Decoder-input corruption \\ span mask + Gaussian noise};
+-\node[decoder_box, right=of decoder] (film) {FiLM waveform \\ decoder};
+-\node[box, right=of film] (reconstructed) {Reconstructed \\ waveform $\hat{x}$};
+-
+-\node[loss_box, right=of projector, yshift=1.5cm] (ljepa) {$\mathcal{L}_{\text{JEPA}}$};
+-\node[loss_box, right=of projector, yshift=-1.5cm] (lvisreg) {$\mathcal{L}_{\text{VISReg}}$};
+-\node[loss_box, right=of reconstructed] (lmel) {$\mathcal{L}_{\text{mel}}$};
+-\node[box, below=4.5cm of encoder, text width=6cm] (target) {Clean target};
+-
+-% Arrows
+-\draw[arrow] (input) -- (augmentation);
+-\draw[arrow] (augmentation) -- (frontend);
+-\draw[arrow] (input) -- (frontend);
+-\draw[arrow] (frontend) -- (masking);
+-\draw[arrow] (masking) -- (encoder);
+-
+-\draw[arrow] (encoder.east) -- ++(1.0,0) |- (projector.west) node[pos=0.25, above, font=\huge] {$p$ branch};
+-\draw[arrow] (encoder.east) -- ++(1.0,0) |- (decoder.west) node[pos=0.25, below, font=\huge] {$z$};
+-
+-\draw[arrow] (projector.east) -- ++(0.75,0) |- (ljepa.west);
+-\draw[arrow] (projector.east) -- ++(0.75,0) |- (lvisreg.west);
+-
+-\draw[arrow] (decoder) -- (film);
+-\draw[arrow] (film) -- (reconstructed);
+-\draw[arrow] (reconstructed) -- (lmel);
+-
+-\draw[dashed_arrow] (target.west) -| (input.south);
+-\draw[dashed_arrow] (target.east) -| (lmel.south);
+-
+-\end{tikzpicture}
+-}
+-\caption{Detailed architecture of the Continuous Latent Autoencoder (CLAE). The clean input provides the reconstruction target. Augmented views pass through the frontend, frame masking, and encoder before branching into the representation ($p$) and waveform-reconstruction ($z$) objectives.}
+-\label{fig:detailed_architecture}
+-\end{figure*}
+-
+-\subsection{Training Objective}
+-
+-Given an input waveform $x$, the model learns a continuous encoder representation $z$ from which a decoder attempts to reconstruct the clean speech signal. To explicitly decouple the downstream representation from the space heavily constrained by the self-supervised contrastive losses, we introduce a separate projector network that maps $z$ into a secondary representation $p$. The overall objective is formalized as a weighted sum of three distinct loss components, designed to balance acoustic fidelity with abstract semantic representation:
+-\begin{equation}
+-  \mathcal{L}_{\text{total}} = 1.0 \mathcal{L}_{\text{mel}} + 0.3 \mathcal{L}_{\text{JEPA}} + 0.7 \mathcal{L}_{\text{VISReg}}
+-  \label{eq:objective}
+-\end{equation}
+-
+-The individual components of this objective function operate as follows:
+-\begin{itemize}
+-    \item \textbf{Mel Reconstruction ($\mathcal{L}_{\text{mel}}$):} This term ensures that the latent space retains sufficient acoustic information to generate speech. It compares the reconstructed audio $\hat{x}$ with the clean target waveform in an 80-bin log-mel domain, utilizing an FFT window size of 1024 and a hop size of 256. To prevent the autoencoder from learning a trivial identity mapping, the decoder input is forcefully regularized using latent span masking and the addition of Gaussian noise.
+-    \item \textbf{JEPA Consistency ($\mathcal{L}_{\text{JEPA}}$):} The Joint-Embedding Predictive Architecture (JEPA) loss enforces consistency across multiple augmented views of the same audio segment. We employ two global views and four local augmented views. The global projector features define a per-frame contextual center, and the network is penalized using mean-square error (MSE) when local features deviate from this global center. This teaches the model to ignore background noise and focus on the underlying phonetic content.
+-    \item \textbf{VISReg Regularization ($\mathcal{L}_{\text{VISReg}}$):} The Variance-Invariance-Covariance Regularization term is critical for preventing representation collapse—a common failure mode in non-contrastive self-supervised learning where all inputs map to a single constant vector. VISReg applies 256 random projections to the pooled projector features, actively encouraging a centered, unit-scale, and isotropic Gaussian-like geometry in the latent space.
+-\end{itemize}
+-It is important to note that traditional adversarial and feature-matching losses, often used in generative audio models (such as GAN-based vocoders), were explicitly disabled for this architecture. Empirical testing revealed that these adversarial objectives occasionally introduced instability during the early stages of representation learning and did not significantly improve the quality of the frozen features for downstream classification tasks.
+-
+-\subsection{Dataset}
+-
+-To ensure the model learns robust and generalized phonetic structures, it is trained entirely from scratch on a massive compilation of four major Bengali speech corpora. This combined dataset contains a total of 1,310,076 utterances, equating to approximately 2,000 total hours of audio data. The datasets were selected to cover a wide variance in recording conditions, speaker demographics, and dialects. A detailed breakdown of the datasets and their respective utterance counts is provided in Table~\ref{tab:dataset_stats}. 
+-
+-\begin{table}[htbp]
+-\centering
+-\begin{tabular}{lr}
+-\toprule
+-\textbf{Dataset} & \textbf{Utterances} \\
+-\midrule
+-Common Voice Bengali & 1,052,178 \\
+-OpenSLR-53 & 218,703 \\
+-regspeech12 & 21,313 \\
+-shrutilipi & 17,882 \\
+-\midrule
+-\textbf{Total} & \textbf{1,310,076} \\
+-\midrule
+-Train Split & 1,244,572 \\
+-Validation Split & 65,504 \\
+-\bottomrule
+-\end{tabular}
+-\caption{Statistics of the Bengali speech datasets utilized for training the CLAE model. The combination of crowdsourced data (Common Voice), regional speech (regspeech12), and audiobooks (shrutilipi) ensures a high degree of acoustic diversity.}
+-\label{tab:dataset_stats}
+-\end{table}
+-
+-The \textit{Common Voice Bengali} corpus forms the backbone of the dataset, providing over a million utterances of highly diverse, crowdsourced speech. \textit{OpenSLR-53} contributes high-quality read speech, while \textit{regspeech12} and \textit{shrutilipi} introduce regional dialectal variations and formal audiobook-style prosody, respectively. This combination is crucial for training a foundation model capable of handling real-world, unconstrained Bengali audio.
+-
+-\subsection{Experimental Setup}
+ 
+ The 23.8M-parameter CLAE model consists of four highly optimized sub-components, carefully sized to balance representational power with inference efficiency. A summary of the architectural hyperparameters and parameter counts is provided in Table~\ref{tab:architecture_hyperparams}.
+ 
+-\begin{table}[htbp]
+-\centering
+-\resizebox{\columnwidth}{!}{%
+-\begin{tabular}{@{}llrp{3.8cm}@{}}
+-\toprule
+-\textbf{Component} & \textbf{Architecture} & \textbf{Params} & \textbf{Key Configuration} \\
+-\midrule
+-Frontend & Conv1D & 2.89M & 5 stages, channels [128-512], strides [5,4,4,4,4] \\
+-Encoder & FastConformer & 12.40M & 8 layers, $d=256$, 8 heads, 9-tap conv \\
+-Projector & MLP & 0.17M & $256 \rightarrow 512 \rightarrow 64$ \\
+-Decoder & FiLM Residual & 8.34M & 768 init channels, strides [4,4,4,4,5] \\
+-\midrule
+-\textbf{Total} & \textbf{CLAE} & \textbf{23.80M} & \textbf{Downsamples 16 kHz to 12.5 Hz} \\
+-\bottomrule
+-\end{tabular}
+-}
+-\caption{Summary of the architectural hyperparameters and parameter distribution across the CLAE components.}
+-\label{tab:architecture_hyperparams}
+-\end{table}
+-
+ The frontend is a five-stage Conv1D architecture designed to aggressively downsample the raw audio. It applies convolutional kernels of sizes 10, 8, 8, 4, 4, with corresponding strides of 5, 4, 4, 4, 4. The cumulative stride is $5 \times 4 \times 4 \times 4 \times 4 = 1280$ samples. For a 16 kHz input, this results in exactly 12.5 frames per second (or one latent frame every 80 ms). The frontend relies on GroupNorm and GELU activations for stable gradient flow.
+ 
+ The core reasoning engine is an eight-layer FastConformer block with a hidden dimension of $d=256$, utilizing 8 attention heads and a Feed-Forward Network (FFN) dimension of 1024. It employs 9-tap depthwise convolutions, a dropout rate of 0.1, and squeeze-and-excitation modules. Additionally, a two-stream multi-Head Convolution (mHC) mixing strategy is integrated at zero-indexed layers 2 and 5 to better fuse local and global context.
+@@ -393,10 +224,7 @@ The training configuration was optimized for stability over long horizons. We ut
+ The primary evaluated model was trained for a total of 170,000 optimizer steps. We tracked the training progress closely via Weights \& Biases (\texttt{wandb}). During the training lifecycle, an interim recovery run was initialized from a step-50,000 checkpoint to transition to a packed-data TAR loader format. During this recovery phase, the base learning rate was manually adjusted from $1\text{e-}3$ down to $5\text{e-}4$ to stabilize the scheduler reconstruction. Under the documented effective batch size and segment length, 170,000 steps correspond to processing 28.56 million training samples. This equates to approximately 23,800 audio hours, representing nearly 23 effective epochs of exposure to the dataset.
+ 
+ \subsection{Pre-processing and View Augmentation Strategy}
+-
+-To effectively leverage the Joint-Embedding Predictive Architecture (JEPA), our framework relies on a sophisticated view augmentation strategy that operates directly on the input representations. Rather than relying on simple frame masking, we dynamically generate multiple perspectives of the same underlying speech signal to encourage the model to learn invariant, high-level semantic features rather than over-fitting to localized acoustic noise.
+-
+-\begin{figure*}[htbp]
++\begin{figure*}[t]
+ \centering
+ \resizebox{0.8\textwidth}{!}{%
+ \begin{tikzpicture}[
+@@ -445,6 +273,8 @@ To effectively leverage the Joint-Embedding Predictive Architecture (JEPA), our
+ \label{fig:jepa_views}
+ \end{figure*}
+ 
++To effectively leverage the Joint-Embedding Predictive Architecture (JEPA), our framework relies on a sophisticated view augmentation strategy that operates directly on the input representations. Rather than relying on simple frame masking, we dynamically generate multiple perspectives of the same underlying speech signal to encourage the model to learn invariant, high-level semantic features rather than over-fitting to localized acoustic noise.
++
+ As illustrated in Figure~\ref{fig:jepa_views}, the input speech segment is transformed into two broad ``global'' views and four narrow ``local'' views. The global views encompass a wider temporal context, allowing the projector network to establish a stable, context-rich target center. Conversely, the local views capture short, highly localized acoustic spans. By minimizing the Mean Squared Error (MSE) between the representations of the local views and the target center of the global views, the model is explicitly trained to predict the overarching phonetic structure from limited, potentially noisy partial observations. This view-based regularization fundamentally underpins the model's robustness to varying acoustic conditions and speaker characteristics in the Bengali corpora.
+ 
+ \section{Experimental Result Analysis}
+@@ -573,9 +403,9 @@ Figure~\ref{fig:gradient_stability} visually explicitly demonstrates this mathem
+ 
+ To empirically validate the quality of the learned representations, we subjected the frozen 170,000-step CLAE encoder to a suite of downstream classification probes. The evaluations spanned Emotion Recognition, Closed-set Speaker Identification, Speaker Verification, and Age Classification. We benchmarked our compact 15.29M-parameter model against a diverse array of foundational architectures, including massive general-purpose models (WavLM, Whisper-tiny), specialized models (ECAPA, emotion2vec), and state-of-the-art codecs (Mimi).
+ 
+-\begin{table}[htbp]
++\begin{table*}[t]
+ \centering
+-\resizebox{\columnwidth}{!}{%
++\resizebox{0.8\textwidth}{!}{%
+ \begin{tabular}{@{}lrrrr@{}}
+ \toprule
+ \textbf{Model} & \textbf{Speaker ID} & \textbf{Emotion} & \textbf{Verification} & \textbf{Age} \\
+@@ -593,7 +423,7 @@ ECAPA & 95.2 & 52.3 & 5.99 & 39.3 \\
+ }
+ \caption{Comparative downstream benchmarking results. Bold indicates CLAE's exceptional performance in Closed-set Speaker Identification relative to its parameter count and sampling rate constraints. Lower is better for Verification (Mean EER); higher is better for all other metrics.}
+ \label{tab:downstream_benchmark}
+-\end{table}
++\end{table*}
+ 
+ The benchmarking results, summarized in Table~\ref{tab:downstream_benchmark}, reveal a striking strength of the CLAE architecture: \textbf{speaker-centric representation learning}. In the Closed-set Speaker Identification task (evaluated on 1,000 held-out utterances from 167 enrolled speakers), our model achieved an extraordinary \textbf{65.6\% test accuracy}. 
+ 
+@@ -638,8 +468,6 @@ To empirically validate the structural decisions and training dynamics of the Co
+ 
+ During these experiments, the loss landscapes were closely monitored, specifically tracking the Mel-spectrogram Reconstruction Loss, Short-Time Fourier Transform (STFT) Loss, JEPA Consistency Loss, and the Variance-Invariance-Covariance Regularization (VISReg) Loss. By analyzing these specific metrics, we can quantitatively deduce how each architectural component anchors the model's behavior. The full comparison of training metrics is presented in Table~\ref{tab:ablation_metrics} and visually summarized in Figure~\ref{fig:ablation_bar_chart}.
+ 
+-
+-
+ \begin{table*}[h]
+ \centering
+ \resizebox{0.9\textwidth}{!}{%
+@@ -697,5 +525,4 @@ To test the robustness of the latent space, we disabled the artificial noise inj
+ \subsection{Effect of the Multi-Head Codebook (MHC)}
+ Finally, we investigated the structural advantage of the continuous latent logic by disabling the Multi-Head Codebook (the ``No MHC'' run). Operating purely as a standard continuous bottleneck without the specialized multi-head attention routing led to a marginal but noticeable degradation in optimization efficiency. Both the Mel Loss (1.557 vs 1.541) and the JEPA Loss (0.0089 vs 0.0088) increased. This validates that the continuous latent parameterization efficiently routes and stabilizes phonemic structures prior to decoding. The MHC acts as a soft-clustering mechanism that naturally groups similar acoustic phenomena into distinct heads, allowing the model to represent complex phonetic boundaries with significantly greater precision than a monolithic continuous bottleneck.
+ 
+-
+ \end{document}
