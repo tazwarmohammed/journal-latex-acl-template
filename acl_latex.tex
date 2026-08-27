@@ -36,8 +36,7 @@
 \usepackage{amsmath}
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.18}
-\usepackage{cuted}
-\usepackage{caption}
+\usepackage{stfloats}
 \usepackage{titlesec}
 \titlespacing*{\section}{0pt}{3ex plus 1ex minus .2ex}{1.5ex plus .2ex}
 \titlespacing*{\subsection}{0pt}{2ex plus 1ex minus .2ex}{1ex plus .2ex}
@@ -637,10 +636,6 @@ We would like to thank the action editor and the anonymous reviewers for their c
 
 \subsection{Summary of Ablation Configurations}
 
-
-
-
-
 To empirically validate the structural decisions and training dynamics of the Continuous Latent Autoencoder (CLAE), we conducted a comprehensive suite of ablation studies. We systematically disabled or altered critical components of the architecture and optimization objective to observe their independent contributions to the model's convergence and representation quality. All ablation configurations were trained for exactly 25,000 steps using identical hardware, data pipelines, and hyperparameters to ensure a completely fair comparison against the baseline model early in its convergence trajectory. 
 
 During these experiments, the loss landscapes were closely monitored, specifically tracking the Mel-spectrogram Reconstruction Loss, Short-Time Fourier Transform (STFT) Loss, JEPA Consistency Loss, and the Variance-Invariance-Covariance Regularization (VISReg) Loss. By analyzing these specific metrics, we can quantitatively deduce how each architectural component anchors the model's behavior. The full comparison of training metrics is presented in Table~\ref{tab:ablation_metrics} and visually summarized in Figure~\ref{fig:ablation_bar_chart}.
@@ -654,11 +649,7 @@ We evaluated the impact of the temporal bottleneck by increasing the frame rate 
 \subsection{Impact of Decoder Corruption}
 To test the robustness of the latent space, we disabled the artificial noise injection before the decoder (the ``No Decoder Corruption'' run). Predictably, providing the decoder with pristine, uncorrupted continuous coordinates resulted in the lowest reconstruction errors across all experiments (Mel Loss: 1.034). However, this artificially depressed loss introduces a severe risk of overfitting. Without corruption, the decoder becomes hypersensitive to exact spatial coordinates in the latent space, effectively memorizing the training data distribution without learning generalizable features. By forcing the baseline decoder to reconstruct the signal from noisy features, the continuous latent autoencoder establishes a highly robust and invariant representation space. This stochastic regularization ensures that the learned phonemic manifolds are wide and forgiving, which is absolutely crucial for generalizing to downstream out-of-distribution speech tasks, particularly in noisy environments or when encountering unseen regional dialects.
 
-\subsection{Effect of the Multi-Head Codebook (MHC)}
-Finally, we investigated the structural advantage of the continuous latent logic by disabling the Multi-Head Codebook (the ``No MHC'' run). Operating purely as a standard continuous bottleneck without the specialized multi-head attention routing led to a marginal but noticeable degradation in optimization efficiency. Both the Mel Loss (1.557 vs 1.541) and the JEPA Loss (0.0089 vs 0.0088) increased. This validates that the continuous latent parameterization efficiently routes and stabilizes phonemic structures prior to decoding. The MHC acts as a soft-clustering mechanism that naturally groups similar acoustic phenomena into distinct heads, allowing the model to represent complex phonetic boundaries with significantly greater precision than a monolithic continuous bottleneck.
-
-\begin{strip}
-
+\begin{table*}[b]
 \centering
 \resizebox{0.9\textwidth}{!}{%
 \begin{tabular}{@{}lcccc@{}}
@@ -671,11 +662,11 @@ No Multi-Head (MHC) & 1.557 & 9.933 & 0.0089 & 0.0247 \\
 Representation Only & 5.084 & 25.918 & 0.0122 & \textbf{0.0085} \\ \bottomrule
 \end{tabular}%
 }
-\captionof{table}{Training metrics at 25,000 steps across various ablation configurations. The baseline utilizes a 12.5 Hz bottleneck, decoder corruption, and a hybrid reconstruction-representation objective.}
+\caption{Training metrics at 25,000 steps across various ablation configurations. The baseline utilizes a 12.5 Hz bottleneck, decoder corruption, and a hybrid reconstruction-representation objective.}
 \label{tab:ablation_metrics}
+\end{table*}
 
-\vspace{2em}
-
+\begin{figure*}[b]
 \centering
 \resizebox{0.75\textwidth}{!}{%
 \begin{tikzpicture}
@@ -699,8 +690,11 @@ Representation Only & 5.084 & 25.918 & 0.0122 & \textbf{0.0085} \\ \bottomrule
 \end{axis}
 \end{tikzpicture}%
 }
-\captionof{figure}{Visual comparison of the Mel-spectrogram Reconstruction Loss at 25,000 steps. Disabling reconstruction grounding (Repr Only) results in catastrophic acoustic loss, while removing decoder corruption (No Corrupt) artificially depresses the loss at the risk of overfitting.}
+\caption{Visual comparison of the Mel-spectrogram Reconstruction Loss at 25,000 steps. Disabling reconstruction grounding (Repr Only) results in catastrophic acoustic loss, while removing decoder corruption (No Corrupt) artificially depresses the loss at the risk of overfitting.}
 \label{fig:ablation_bar_chart}
+\end{figure*}
 
-\end{strip}
+\subsection{Effect of the Multi-Head Codebook (MHC)}
+Finally, we investigated the structural advantage of the continuous latent logic by disabling the Multi-Head Codebook (the ``No MHC'' run). Operating purely as a standard continuous bottleneck without the specialized multi-head attention routing led to a marginal but noticeable degradation in optimization efficiency. Both the Mel Loss (1.557 vs 1.541) and the JEPA Loss (0.0089 vs 0.0088) increased. This validates that the continuous latent parameterization efficiently routes and stabilizes phonemic structures prior to decoding. The MHC acts as a soft-clustering mechanism that naturally groups similar acoustic phenomena into distinct heads, allowing the model to represent complex phonetic boundaries with significantly greater precision than a monolithic continuous bottleneck.
+
 \end{document}

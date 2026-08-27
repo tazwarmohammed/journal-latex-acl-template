@@ -83,7 +83,7 @@ if fig6:
     fig6 = re.sub(r'\\begin\{figure\*\}\[.*?\]', r'\\begin{figure*}[b]', fig6)
 if tab5 and fig6:
     combined = tab5 + '\n\n' + fig6
-    content = insert_after(content, r'\subsection{Summary of Ablation Configurations}', combined)
+    content = insert_after(content, r'\subsection{Effect of the Multi-Head Codebook (MHC)}', combined)
 
 # Clean up multiple newlines
 content = re.sub(r'\n{3,}', '\n\n', content)
