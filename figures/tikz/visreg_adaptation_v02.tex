@@ -1,0 +1,35 @@
+\documentclass[tikz,border=5pt]{standalone}
+\usetikzlibrary{arrows.meta,positioning,fit,backgrounds}
+
+\definecolor{ink}{HTML}{243447}
+\definecolor{input}{HTML}{E4F3EE}
+\definecolor{transform}{HTML}{E8F1F8}
+\definecolor{match}{HTML}{F7EBD0}
+
+\begin{document}
+\begin{tikzpicture}[
+  scale=.78, transform shape,
+  font=\sffamily\small,
+  stepbox/.style={draw=ink, line width=.65pt, rounded corners=2pt,
+    minimum height=10mm, text width=27mm, align=center, inner sep=3pt},
+  flow/.style={-{Latex[length=2.2mm,width=1.5mm]}, draw=ink, line width=.8pt},
+  note/.style={font=\sffamily\scriptsize, text=ink!85, align=center}
+]
+  \path[use as bounding box] (-1.8,1.2) rectangle (20.05,-2.0);
+  \node[stepbox, fill=input] (frames) at (0,0) {all projector frames\\views $\times$ examples};
+  \node[stepbox, fill=input] (population) at (3.65,0) {one distributed\\population};
+  \node[stepbox, fill=transform] (norm) at (7.3,0) {center + scale\\detached scale};
+  \node[stepbox, fill=transform] (project) at (10.95,0) {256 random normalized\\projections};
+  \node[stepbox, fill=transform] (sort) at (14.6,0) {sort values\\per projection};
+  \node[stepbox, fill=match] (quantile) at (18.25,0) {match standard-normal\\quantiles};
+
+  \draw[flow] (frames) -- (population);
+  \draw[flow] (population) -- (norm);
+  \draw[flow] (norm) -- (project);
+  \draw[flow] (project) -- (sort);
+  \draw[flow] (sort) -- (quantile);
+
+  \node[note, below=6mm of population] (adapt) {project adaptation: flatten frames from every view and example;\\gather the population across distributed workers};
+  \draw[draw=ink!55, line width=.6pt] (adapt.north) -- (population.south);
+\end{tikzpicture}
+\end{document}

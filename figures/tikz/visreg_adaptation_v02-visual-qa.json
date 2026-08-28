@@ -1,0 +1,14 @@
+{
+  "pdf": "/Users/aryanrahman/Projects/research/continuous-latent-autoencoder/journal-latex-acl-template/figures/tikz/visreg_adaptation_v02.pdf",
+  "mode": "research",
+  "text_plot_overlap_check": false,
+  "plot_label_regex": null,
+  "page": {
+    "width": 493.07000732421875,
+    "height": 80.72000122070312
+  },
+  "text_box_count": 16,
+  "title": null,
+  "issues": [],
+  "status": "pass"
+}
