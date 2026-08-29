@@ -1,0 +1,131 @@
+\documentclass[tikz,border=4pt]{standalone}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+
+\definecolor{ink}{HTML}{243447}
+\definecolor{lossblue}{HTML}{2F6F9F}
+\definecolor{lrgold}{HTML}{B7791F}
+\definecolor{gridgray}{HTML}{D8DEE5}
+
+\pgfplotsset{
+  diagnostic/.style={
+    width=7.75cm,
+    height=4.25cm,
+    scale only axis,
+    tick label style={font=\sffamily\scriptsize, color=ink},
+    label style={font=\sffamily\footnotesize, color=ink},
+    title style={font=\sffamily\footnotesize, color=ink, align=center},
+    axis line style={draw=ink!70},
+    tick style={draw=ink!70},
+    grid=major,
+    grid style={draw=gridgray, line width=.25pt},
+    xlabel={optimizer step (thousands)},
+    ylabel={total objective},
+    unbounded coords=discard,
+  },
+  lossplot/.style={draw=lossblue, line width=.65pt, no marks},
+  lrplot/.style={draw=lrgold, line width=.7pt, dashed, no marks},
+}
+
+\begin{document}
+\begin{tikzpicture}[font=\sffamily]
+  \begin{scope}
+    \begin{axis}[
+      diagnostic,
+      name=s1,
+      title={(a) Segment 1 (includes 45k resume)},
+      xmin=0,xmax=60,ymin=1.2,ymax=5.7,
+      xtick={0,20,40,60},ytick={1.5,3,4.5},
+    ]
+      \addplot[lossplot] table[x expr=\thisrow{step}/1000,y=value,col sep=comma]
+        {../wandb/raw/data/20260717_124435/loss-c9279f09.csv};
+      \node[anchor=north east,font=\sffamily\scriptsize,text=ink,fill=white,inner sep=1.5pt]
+        at (rel axis cs:.98,.96) {configured base LR $10^{-3}$; LR not logged};
+    \end{axis}
+  \end{scope}
+
+  \begin{scope}[xshift=9.15cm]
+    \begin{axis}[
+      diagnostic,
+      name=s2,
+      title={(b) Segment 2: 50k recovery (base LR $5\!\times\!10^{-4}$)},
+      xmin=50,xmax=100,ymin=1.32,ymax=1.52,
+      xtick={50,75,100},ytick={1.35,1.42,1.49},
+      ylabel={},
+    ]
+      \addplot[lossplot] table[x expr=\thisrow{step}/1000,y=value,col sep=comma]
+        {../wandb/raw/data/large-2kh-packed-recovery-lr-half/loss-c9279f09.csv};
+    \end{axis}
+    \begin{axis}[
+      width=7.75cm,height=4.25cm,scale only axis,
+      xmin=50,xmax=100,ymin=0,ymax=3,
+      axis x line=none,axis y line*=right,
+      ylabel={LR ($\times10^{-4}$)},
+      ytick={0,1,2,3},
+      tick label style={font=\sffamily\scriptsize,color=lrgold},
+      label style={font=\sffamily\footnotesize,color=lrgold},
+      tick style={draw=lrgold},
+    ]
+      \addplot[lrplot] table[x expr=\thisrow{step}/1000,y expr=\thisrow{value}*10000,col sep=comma]
+        {../wandb/raw/data/large-2kh-packed-recovery-lr-half/lr-1370e957.csv};
+    \end{axis}
+  \end{scope}
+
+  \begin{scope}[yshift=-6.25cm]
+    \begin{axis}[
+      diagnostic,
+      name=s3,
+      title={(c) Segment 3: 100k--170.7k continuation},
+      xmin=100,xmax=171,ymin=1.30,ymax=1.43,
+      xtick={100,135,170},ytick={1.32,1.37,1.42},
+    ]
+      \addplot[lossplot] table[x expr=\thisrow{step}/1000,y=value,col sep=comma]
+        {../wandb/raw/data/large-2kh-packed-300k-tail-lr-1e4/loss-c9279f09.csv};
+    \end{axis}
+    \begin{axis}[
+      width=7.75cm,height=4.25cm,scale only axis,
+      xmin=100,xmax=171,ymin=0,ymax=1,
+      axis x line=none,axis y line*=right,
+      ylabel={},
+      ytick={0,.5,1},
+      tick label style={font=\sffamily\scriptsize,color=lrgold},
+      label style={font=\sffamily\footnotesize,color=lrgold},
+      tick style={draw=lrgold},
+    ]
+      \addplot[lrplot] table[x expr=\thisrow{step}/1000,y expr=\thisrow{value}*10000,col sep=comma]
+        {../wandb/raw/data/large-2kh-packed-300k-tail-lr-1e4/lr-1370e957.csv};
+    \end{axis}
+  \end{scope}
+
+  \begin{scope}[xshift=9.15cm,yshift=-6.25cm]
+    \begin{axis}[
+      diagnostic,
+      name=s4,
+      title={(d) Segment 4: 170.7k--210k continuation},
+      xmin=170,xmax=211,ymin=1.30,ymax=1.41,
+      xtick={170,190,210},ytick={1.32,1.36,1.40},
+      ylabel={},
+    ]
+      \addplot[lossplot] table[x expr=\thisrow{step}/1000,y=value,col sep=comma]
+        {../wandb/raw/data/large-2kh-packed-210k-tail-lr-1e4/loss-c9279f09.csv};
+    \end{axis}
+    \begin{axis}[
+      width=7.75cm,height=4.25cm,scale only axis,
+      xmin=170,xmax=211,ymin=0,ymax=.5,
+      axis x line=none,axis y line*=right,
+      ylabel={LR ($\times10^{-4}$)},
+      ytick={0,.2,.4},
+      tick label style={font=\sffamily\scriptsize,color=lrgold},
+      label style={font=\sffamily\footnotesize,color=lrgold},
+      tick style={draw=lrgold},
+    ]
+      \addplot[lrplot] table[x expr=\thisrow{step}/1000,y expr=\thisrow{value}*10000,col sep=comma]
+        {../wandb/raw/data/large-2kh-packed-210k-tail-lr-1e4/lr-1370e957.csv};
+    \end{axis}
+  \end{scope}
+
+  \node[anchor=north,font=\sffamily\footnotesize,text=ink,inner sep=0pt]
+    at ([yshift=-4mm]current bounding box.south) {\tikz\draw[lossblue,line width=1pt] (0,0)--(5mm,0);\quad unsmoothed total objective\qquad
+      \tikz\draw[lrgold,line width=1pt,dashed] (0,0)--(5mm,0);\quad logged learning rate};
+\end{tikzpicture}
+\end{document}

@@ -38,7 +38,7 @@
   \draw[flow] (proj) -- (cons);
   \draw[flow] (proj.south) -- ++(0,-.30) -| (vis.south);
 
-  \node[smallbox, fill=target] (corrupt) at (12.0,-4.65) {decoder span mask\\+ Gaussian noise};
+  \node[smallbox, fill=target] (corrupt) at (12.0,-4.65) {first-global $z$\\span mask + noise};
   \node[smallbox, fill=target] (decoder) at (8.1,-4.65) {waveform decoder};
   \node[smallbox, fill=target] (recon) at (4.2,-4.65) {reconstructed\\waveform};
   \node[smallbox, fill=objective] (mel) at (0.3,-4.65) {log-mel\\reconstruction loss};
