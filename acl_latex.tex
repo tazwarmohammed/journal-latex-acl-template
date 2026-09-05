@@ -1,5 +1,4 @@
-\documentclass[11pt]{article}
-\usepackage{acl}
+\documentclass[11pt,a4paper]{article}
 \usepackage{times}
 \usepackage{latexsym}
 \usepackage[T1]{fontenc}
@@ -10,6 +9,11 @@
 \usepackage{booktabs}
 \usepackage{amsmath}
 \usepackage{amssymb}
+\usepackage{tacl2021v1} % Official default: anonymous submission.
+% Keep the official confidentiality text visible above PDF figures and floats.
+\renewcommand{\confidential}{}
+\AddToHook{shipout/foreground}{\put(0,-34){\makebox[\paperwidth][c]{\normalcolor\naaclhv\confidentialtext}}}
+\hypersetup{pdfauthor={},pdftitle={CLAE: A Compact 12.5 Hz Bengali Speech Representation Encoder}}
 
 \title{CLAE: A Compact 12.5~Hz Bengali Speech Representation Encoder}
 \author{Anonymous authors}
@@ -18,7 +22,7 @@
 \maketitle
 
 \begin{abstract}
-We study a compact general-purpose representation encoder for 16~kHz Bengali speech. Its 15.29M-parameter frontend and encoder produce 256-dimensional features $z$ at 12.5 frames/s for downstream frozen-feature discrimination tasks; the full training model has 23.80M parameters. The 12.5~Hz resolution aligns with low-frame-rate neural audio codecs and tokenizers such as Mimi, DualCodec, and NanoCodec \citep{defossez2024moshi,li2025dualcodec,casanova2025nanocodec}, while CLAE remains continuous: its floating-point latent is neither quantized nor entropy-coded, so its scalar rate is not bitrate-comparable. A separate per-frame projector maps $z$ to a 64-dimensional space $p$. Training uses waveform reconstruction as an auxiliary self-supervised pretext and information-retention objective, non-contrastive global/local view consistency in $p$ to encourage nuisance-invariant features, and Variance-Invariance-Sketching Regularization (VISReg) in $p$ to support non-collapsed, well-distributed representations. At the selected 210k-step checkpoint, frozen $z$ features support the reported emotion, age, gender, and speaker probes; reconstruction on 400 held-out Common Voice Bengali clips gives MR-STFT 0.747, STOI 0.850, ESTOI 0.762, and PESQ-WB 2.146. A matched 25k-step study shows that removing reconstruction worsens reconstruction metrics and two temporal-emotion probes in this setting. These results are single-seed point estimates and objective proxy measurements; they do not establish encoder fine-tuning performance, statistical significance, subjective audio quality, or broad task coverage.
+We study a compact representation encoder for 16~kHz Bengali speech. Its 15.29M-parameter frontend and encoder produce 256-dimensional features $z$ at 12.5 frames/s for downstream frozen-feature discrimination tasks; the full training model has 23.80M parameters. The 12.5~Hz resolution aligns with low-frame-rate neural audio codecs and tokenizers such as Mimi, DualCodec, and NanoCodec \citep{defossez2024moshi,li2025dualcodec,casanova2025nanocodec}, while CLAE remains continuous: its floating-point latent is neither quantized nor entropy-coded, so its scalar rate is not bitrate-comparable. A separate per-frame projector maps $z$ to a 64-dimensional space $p$. Training uses waveform reconstruction as an auxiliary self-supervised pretext and information-retention objective, non-contrastive global/local view consistency in $p$ to encourage nuisance-invariant features, and Variance-Invariance-Sketching Regularization (VISReg) in $p$ to support non-collapsed, well-distributed representations. At the selected 210k-step checkpoint, frozen $z$ features support the reported emotion, age, gender, and speaker probes; reconstruction on 400 Common Voice Bengali validation-manifest clips gives MR-STFT 0.747, STOI 0.850, ESTOI 0.762, and PESQ-WB 2.146. A matched 25k-step study shows that removing reconstruction worsens reconstruction metrics and two temporal-emotion probes in this setting. The main comparisons use one seed and objective reconstruction metrics; broader evaluation is needed to establish generality.
 \end{abstract}
 
 \section{Introduction}
@@ -27,7 +31,7 @@ Compact speech encoders are useful when their frozen features retain information
 
 We present CLAE, a 23.80M-parameter continuous-latent training model trained on an approximately 2,000-hour inventory assembled from four Bengali speech sources. Its 15.29M-parameter frontend and encoder produce a 256-dimensional frame-level representation $z$ at 12.5~Hz; downstream probes keep this feature extractor frozen and consume $z$. A distinct 64-dimensional projector output $p$ is used only by two representation objectives: direct global/local view consistency and Variance-Invariance-Sketching Regularization (VISReg; \citealp{wu2026visreg}). View consistency encourages features stable to the augmentation and masking nuisances used to construct the views. VISReg supports a centered, scaled, and distributed projector population, countering degenerate representations. Reconstruction is an auxiliary self-supervised pretext and information-retention objective: the decoder generates a waveform from a corrupted copy of $z$, and the generated waveform is compared with the clean source in an 80-bin log-mel domain.
 
-The contribution is empirical and implementation-specific. We provide: (i) a compact continuous 12.5~Hz Bengali speech representation encoder evaluated through frozen-feature discrimination probes; (ii) a training objective that combines reconstruction for self-supervised information retention, non-contrastive view consistency for nuisance invariance, and frame-level VISReg for anti-collapse and distribution regularization; (iii) a Conformer-derived encoder with a project adaptation of Manifold-Constrained Hyper-Connections (mHC); and (iv) completed evaluations of the selected 210k-step checkpoint together with a matched 25k-step ablation suite. The completed probes make CLAE a candidate general-purpose Bengali speech representation for the stated tasks, not a demonstrated foundation model: we do not claim encoder fine-tuning performance, novelty of the individual components, deployment-codec capability, or broad language or population coverage.
+The contribution is empirical and implementation-specific. We provide: (i) a compact continuous 12.5~Hz Bengali speech representation encoder evaluated through frozen-feature discrimination probes; (ii) a training objective that combines reconstruction for self-supervised information retention, non-contrastive view consistency for nuisance invariance, and frame-level VISReg for anti-collapse and distribution regularization; (iii) a Conformer-derived encoder with a project adaptation of Manifold-Constrained Hyper-Connections (mHC); and (iv) evaluations of the selected 210k-step checkpoint together with a matched 25k-step ablation suite. We assess the combined design through frozen-feature probes and ablations; the individual architectural and objective components build on prior work.
 
 \section{Related Work}
 
@@ -35,19 +39,19 @@ The contribution is empirical and implementation-specific. We provide: (i) a com
 Image JEPA introduced representation-space prediction with distinct context and target pathways \citep{assran2023ijepa}; A-JEPA adapted masked-target JEPA ideas to audio \citep{fei2023ajepa}. LeJEPA instead studies direct view agreement with isotropic-Gaussian regularization \citep{balestriero2025lejepa}. CLAE uses a JEPA-inspired, non-contrastive per-frame view-agreement loss, but it is not canonical predictive JEPA: it has one shared encoder and no target encoder, exponential moving average, learned predictor, stop-gradient target path, masked-region prediction, or negative pairs. It also differs from LeJEPA in domain, waveform view construction, grouped consistency loss, frame-level population, supporting regularizer, and reconstruction.
 
 \paragraph{Distribution regularization.}
-VICReg combines invariance, per-dimension variance control, and covariance regularization \citep{bardes2022vicreg}. VISReg retains explicit center and scale terms but replaces covariance control with random one-dimensional projections whose sorted samples are matched to Gaussian quantiles \citep{wu2026visreg}. We use the exact name Variance-Invariance-Sketching Regularization as a supporting anti-collapse and distribution constraint, not as the central representation-learning premise. The project adopted the recent VISReg preprint in July 2026 and applies a local, frame-level adaptation described in Section~\ref{sec:visreg}; no controlled VISReg-versus-SIGReg experiment is available.
+VICReg combines invariance, per-dimension variance control, and covariance regularization \citep{bardes2022vicreg}. VISReg retains explicit center and scale terms but replaces covariance control with random one-dimensional projections whose sorted samples are matched to Gaussian quantiles \citep{wu2026visreg}. We use VISReg to regularize the distribution of projector features and discourage collapse. Our frame-level adaptation is described in Section~\ref{sec:visreg}.
 
 \paragraph{Continuous and discrete audio representations.}
 Continuous Audio Language Models use a continuous variational bottleneck, KL regularization, additional speech distillation, and generative next-frame modeling \citep{rouard2025calm}; those components are not used here. UniWav studies joint representation and generation objectives for speech \citep{liu2025uniwav}. By contrast, UniAudio and UniTok-Audio illustrate autoregressive generation over discrete audio tokens \citep{yang2024uniaudio,liu2025unitokaudio}. Neural codecs such as SoundStream and EnCodec learn quantized, bitrate-controlled representations \citep{zeghidour2021soundstream,defossez2023encodec}. Mimi, introduced with Moshi, is a separately pretrained common-evaluation reconstruction reference in our 25k study \citep{defossez2024moshi}. CLAE's continuous floating-point latent is neither quantized nor entropy-coded, so its scalar rate is not directly comparable to codec bitrate.
 
 \paragraph{Sequence encoder and residual connections.}
-The encoder builds on the Conformer macaron block \citep{gulati2020conformer}. Its local class name refers to FastConformer, but it does not implement the published architecture's complete downsampling and scalable/local-attention design \citep{rekesh2023fastconformer}; we therefore call it a Conformer-derived encoder. Selected layers use a project adaptation of Manifold-Constrained Hyper-Connections \citep{xie2025mhc}, not a codebook, clustering method, or quantizer.
+The encoder builds on the Conformer macaron block \citep{gulati2020conformer}. It incorporates squeeze-and-excitation but does not adopt the full downsampling and local-attention design of FastConformer \citep{rekesh2023fastconformer}. Selected layers use a project adaptation of Manifold-Constrained Hyper-Connections \citep{xie2025mhc}.
 
 \section{Method}
 
 \subsection{Architecture}
 
-For a 16~kHz mono waveform $x$, the convolutional frontend has five Conv1D stages with channels $[128,256,384,512,512]$, kernels $[10,8,8,4,4]$, and strides $[5,4,4,4,4]$, with GroupNorm and GELU. Its total stride is 1,280 samples, yielding approximately 12.5 frames/s. An eight-layer, 256-dimensional Conformer-derived encoder uses eight attention heads, a 1,024-dimensional feed-forward sublayer, rotary full self-attention, macaron feed-forward modules, a 9-tap convolution branch, dropout 0.1, and squeeze-and-excitation. It produces
+Figure~\ref{fig:architecture} summarizes the architecture. For a 16~kHz mono waveform $x$, the convolutional frontend has five Conv1D stages with channels $[128,256,384,512,512]$, kernels $[10,8,8,4,4]$, and strides $[5,4,4,4,4]$, with GroupNorm and GELU. Its total stride is 1,280 samples, yielding approximately 12.5 frames/s. An eight-layer, 256-dimensional Conformer-derived encoder uses eight attention heads, a 1,024-dimensional feed-forward sublayer, rotary full self-attention, macaron feed-forward modules, a 9-tap convolution branch, dropout 0.1, and squeeze-and-excitation. It produces
 \begin{equation}
 z = E(F(x)), \qquad z\in\mathbb{R}^{T'\times256}.
 \end{equation}
@@ -58,7 +62,7 @@ The FiLM-conditioned waveform decoder starts with 768 channels, reverses the fro
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/tikz/clae_architecture.pdf}
-\caption{Implemented training and evaluation paths. Two global and four full-length local views of the same pre-cropped segment share the frontend, encoder, and projector. Local views use stronger timing-preserving augmentation and frame-aligned masking, not shorter temporal crops. The JEPA-inspired non-contrastive per-frame agreement and supporting VISReg constraint act on projector outputs $p$; decoder corruption and waveform reconstruction use the first-global encoder latent $z$, and frozen-feature probes consume $z$.}
+\caption{CLAE architecture and objectives. (a) Shared feature extraction produces a continuous 256-dimensional latent at 12.5 Hz; outlined encoder blocks mark the two mHC layers. (b) Representation objectives operate in the 64-dimensional projector space. (c) Auxiliary reconstruction preserves information in the encoder latent. (d) Dashed arrows indicate frozen-feature evaluation. Two global and four full-length local views of the same pre-cropped segment share the frontend, encoder, and projector. Local views use stronger timing-preserving augmentation and frame-aligned masking, not shorter temporal crops. The JEPA-inspired non-contrastive per-frame agreement and supporting VISReg constraint act on projector outputs $p$; decoder corruption and waveform reconstruction use the first-global encoder latent $z$, and frozen-feature probes consume $z$. Waveforms and feature tiles are schematic.}
 \label{fig:architecture}
 \end{figure*}
 
@@ -78,7 +82,7 @@ The two group means are added, so global and local groups have equal aggregate c
 \subsection{VISReg adaptation}
 \label{sec:visreg}
 
-The supporting VISReg implementation flattens projector frames from all views and examples into one population; it does not pool them. Under distributed training, the population is gathered across workers. Its effective shape is $N=1$, $B=T'VB_{\mathrm{global}}$, and $D=64$. For population points $q_i\in\mathbb{R}^D$, it penalizes the population mean, centers the points, computes a per-dimension RMS scale with division by $\sqrt{B}$, and penalizes deviation from unit scale. Normalization uses a detached scale. On every forward pass, 256 normalized Gaussian directions are sampled. Values projected onto each direction are sorted and matched to standard-normal quantiles $\Phi^{-1}(i/(B+1))$. Center, scale, and projected-distribution shape terms have equal internal weight.
+Figure~\ref{fig:visreg} outlines the regularizer. The supporting VISReg implementation flattens projector frames from all views and examples into one population; it does not pool them. Under distributed training, the population is gathered across workers. Its effective shape is $N=1$, $B=T'VB_{\mathrm{global}}$, and $D=64$. For population points $q_i\in\mathbb{R}^D$, it penalizes the population mean, centers the points, computes a per-dimension RMS scale with division by $\sqrt{B}$, and penalizes deviation from unit scale. Normalization uses a detached scale. On every forward pass, 256 normalized Gaussian directions are sampled. Values projected onto each direction are sorted and matched to standard-normal quantiles $\Phi^{-1}(i/(B+1))$. Center, scale, and projected-distribution shape terms have equal internal weight.
 
 \begin{figure*}[t]
 \centering
@@ -87,11 +91,11 @@ The supporting VISReg implementation flattens projector frames from all views an
 \label{fig:visreg}
 \end{figure*}
 
-This implements the core VISReg center/scale/shape construction with project-specific frame-level and distributed adaptations. The version used by the 210k checkpoint is the repository implementation at commit \texttt{35be6652f7a2}. Relative to the later upstream implementation, it gathers across workers, adds $10^{-6}$ to scale rather than using a lower clamp, fixes equal internal weights, and casts cached target quantiles to the activation dtype. The main run uses BF16. We do not describe this version as identical to the current upstream implementation.
+This implements the core VISReg center/scale/shape construction with project-specific frame-level and distributed adaptations. Our adaptation gathers frames across workers, adds $10^{-6}$ to the scale for numerical stability, assigns equal weights to the three terms, and casts target quantiles to the activation dtype. Training uses BF16 precision.
 
 \subsection{Reconstruction and total objective}
 
-The decoder receives $z$ from the first global view. Before decoding, an independent span mask removes 50\% of frames in spans of 4--24 frames and Gaussian noise with standard deviation 0.03 is added. The target remains the clean source waveform. The decoder outputs a waveform, which is compared with the clean waveform using an 80-bin log-mel loss with FFT size 1,024, window length 1,024, hop length 256, a Hann window, magnitude weight 1.0, log-magnitude weight 1.0, and spectral-convergence weight 0. Multi-resolution STFT code exists but is not an additional training objective for the selected run.
+The decoder receives $z$ from the first global view. Before decoding, an independent span mask removes 50\% of frames in spans of 4--24 frames and Gaussian noise with standard deviation 0.03 is added. The target remains the clean source waveform. The decoder outputs a waveform, which is compared with the clean waveform using an 80-bin log-mel loss with FFT size 1,024, window length 1,024, hop length 256, a Hann window, magnitude weight 1.0, log-magnitude weight 1.0, and spectral-convergence weight 0. Multi-resolution STFT is used only for evaluation.
 
 The selected objective is
 \begin{equation}
@@ -100,7 +104,7 @@ The selected objective is
 0.3\mathcal{L}_{\mathrm{view}}+
 0.7\mathcal{L}_{\mathrm{VISReg}}.
 \end{equation}
-These values are coefficients for losses with different scales; 0.7 is not a percentage of the total objective. Vector quantization, a variational bottleneck, KL divergence, adversarial loss, feature matching, and autoregressive prediction are inactive in the selected run.
+The three coefficients weight losses with different numerical scales. Training uses no quantization, variational bottleneck, or adversarial objective.
 
 \subsection{mHC adaptation}
 
@@ -144,30 +148,22 @@ Validation & 65,504 \\
 \label{tab:training-split}
 \end{table}
 
-The selected checkpoint comes from run \texttt{large-2kh-packed-210k-tail-lr-1e4}.\footnote{Repository-relative checkpoint path: \nolinkurl{runs/large-2kh-packed-210k-tail-lr-1e4/checkpoints/last.pt}.} Training was deliberately stopped at 210,000 steps, and the resulting terminal checkpoint is reported; it was not selected from a downstream-metric checkpoint sweep. Training uses BF16, AdamW, batch size 42, gradient accumulation over four batches, and gradient clipping at 1.0. The complete 210k trajectory is distributed across four W\&B records: \texttt{20260717\_124435}, \texttt{large-2kh-packed-recovery-lr-half}, \texttt{large-2kh-packed-300k-tail-lr-1e4}, and \texttt{large-2kh-packed-210k-tail-lr-1e4}. Each record resumes the same model trajectory, although checkpoint directories and run identifiers change between machines. The first continuation resumed the 45k checkpoint under the packed base configuration; the 50k continuation reduced the base learning rate to $5\times10^{-4}$; and the later continuations used $10^{-4}$ with a 300k scheduler horizon before the final maximum was set to 210k. The scheduler is reconstructed from the completed step and active resume configuration rather than restored as independent state, so the trajectory is continuous in checkpoint lineage but not one uninterrupted default cosine schedule.
+We report the terminal checkpoint after 210,000 training steps, without downstream-metric checkpoint selection. Training uses BF16, AdamW, batch size 42, gradient accumulation over four batches, and gradient clipping at 1.0. The learning-rate schedule was adjusted during training: the base learning rate was reduced to $5\times10^{-4}$ at step 50,000, and later continuations used $10^{-4}$ with a 300,000-step scheduler horizon. Training ended at step 210,000. Thus, the trajectory includes manual schedule changes rather than a single uninterrupted cosine schedule.
 
-The effective batch is 168 source segments per optimizer step. At 210,000 steps this corresponds to 35.28M sampled source segments, or 105.84M seconds (29,400 hours) of nominal source-audio exposure. It is also about 28.35 training-manifest-equivalent sampled utterance counts. These are exposure-equivalent quantities, not unique examples or duration: augmentation, random cropping, packed-data shuffling, and repeated sampling alter what is observed. The six representation views increase computation but are not six independently sampled source recordings.
+With batch size 42 and four accumulation batches on one worker, the nominal effective batch is 168 source segments. If this batch construction is maintained across the trajectory, 210,000 training steps correspond to 35.28M sampled three-second segments, or 29,400 hours of exposure including repeated sampling. These are exposure estimates, not audited counts of unique audio or successful parameter updates. Each source segment produces six augmented views.
 
-There is no active in-loop validation. Configuration fields for a validation manifest, evaluation interval, and validation batches do not trigger validation in the training path. W\&B records training provenance and diagnostics; its curves are not validation curves and are not used here as evidence of generalization.
-
-Figure~\ref{fig:training-diagnostics} shows the four W\&B records for this single 210k trajectory in separate panels. The first record contains both original and resumed logging and overlaps the 50k recovery record from step 50,050 through 59,250 because that continuation resumed from the 50k checkpoint. The third segment completed successfully through step 170,700; its W\&B terminal-state flag is inaccurate. The final record continues the same training trajectory from the renamed \nolinkurl{runs/bengali-210k/checkpoints/last.pt} checkpoint and logs steps 170,750 through 210,000. We keep the panels separate to expose the overlap, resumptions, and manual schedule changes rather than hiding them in a stitched curve.
-
-\begin{figure*}[t]
-\centering
-\includegraphics[width=\textwidth]{figures/tikz/training_diagnostics.pdf}
-\caption{The complete 210k training trajectory across four W\&B records and three resume boundaries. Curves are unsmoothed and panels remain separate to show the overlapping 50k recovery and manual learning-rate changes; objective-axis ranges differ by panel. The first record has no logged learning-rate series. These are training diagnostics, not validation or convergence evidence.}
-\label{fig:training-diagnostics}
-\end{figure*}
+There is no active in-loop validation or validation-based early stopping. The terminal checkpoint is reported without a downstream-metric sweep.
 
 \section{Evaluation}
+\label{sec:evaluation}
 
-We report only completed artifacts that identify the checkpoint, data, protocol, and metric. The selected 210k checkpoint is evaluated separately from the matched 25k ablations; their absolute scores should not be interpreted as a checkpoint-matched comparison. Reconstruction metrics are objective proxies. PESQ \citep{rix2001pesq}, STOI \citep{taal2010stoi}, ESTOI \citep{jensen2016estoi}, and MR-STFT \citep{yamamoto2020parallelwavegan} do not substitute for listener judgments.
+We evaluate reconstruction quality and frozen-feature performance on downstream speech tasks. The selected 210k checkpoint is evaluated separately from the matched 25k ablations; their absolute scores should not be interpreted as a checkpoint-matched comparison. Reconstruction metrics are objective proxies. PESQ \citep{rix2001pesq}, STOI \citep{taal2010stoi}, ESTOI \citep{jensen2016estoi}, and MR-STFT \citep{yamamoto2020parallelwavegan} do not substitute for listener judgments.
 
-Where available, we compare frozen CLAE features with WavLM \citep{chen2022wavlm}, Whisper \citep{radford2023whisper}, ECAPA-TDNN \citep{desplanques2020ecapa}, emotion2vec \citep{ma2024emotion2vec}, Mimi \citep{defossez2024moshi}, and the exact evaluated Higgs tokenizer, \nolinkurl{bosonai/higgs-audio-v2-tokenizer} at revision \nolinkurl{403fbacf2f60caaa102f893fdfabb694619b2417} \citep{boson2025higgsaudiov2tokenizer}. These are purpose-built systems with different training objectives and specializations; they are reported as task-specific references rather than a homogeneous family of representation models.
+Appendix~\ref{sec:replication} specifies feature extraction, metric definitions, label inventories, and replication constraints. Where available, we compare frozen CLAE features with WavLM \citep{chen2022wavlm}, Whisper \citep{radford2023whisper}, ECAPA-TDNN \citep{desplanques2020ecapa}, emotion2vec \citep{ma2024emotion2vec}, Mimi \citep{defossez2024moshi}, and Higgs Audio V2 tokenizer \citep{boson2025higgsaudiov2tokenizer}. These are purpose-built systems with different training objectives and specializations; they are reported as task-specific references rather than a homogeneous family of representation models.
 
 \subsection{Selected 210k checkpoint}
 
-Table~\ref{tab:main210k} reports the selected completed metrics used for the main analysis. Reconstruction uses a fixed order of 400 three-second Common Voice Bengali validation clips and FP32 inference. Classification probes keep the frontend and encoder frozen. Emotion, age, and gender use speaker-disjoint folds. Closed-set speaker identification holds out utterances from the same enrolled speakers. Speaker verification uses cosine-scored all-pairs trials, which is a diagnostic rather than a standard enrollment/test benchmark. To keep the reporting consistent with the compact evaluation setting, Table~\ref{tab:main210k} gives the fixed seed-0 point estimate for learned probes; reconstruction and verification have no probe seed.
+Table~\ref{tab:main210k} reports the main evaluation results. Reconstruction uses a fixed order of 400 three-second Common Voice Bengali validation-manifest clips and FP32 inference. Saved per-item paths identify Common Voice release 26.0 (June 12, 2026); disjointness from pretraining has not been audited. Classification probes keep the frontend and encoder frozen. Emotion, age, and gender use speaker-disjoint folds. Closed-set speaker identification holds out utterances from the same enrolled speakers. Speaker verification uses cosine-scored all-pairs trials, which is a diagnostic rather than a standard enrollment/test benchmark. To keep the reporting consistent with the compact evaluation setting, Table~\ref{tab:main210k} gives the fixed seed-0 point estimate for learned probes; reconstruction and verification have no probe seed.
 
 \begin{table*}[t]
 \centering
@@ -177,7 +173,7 @@ Table~\ref{tab:main210k} reports the selected completed metrics used for the mai
 \toprule
 Task & Data and protocol & Metric & Result \\
 \midrule
-Reconstruction & Common Voice Bengali, fixed 400 clips & MR-STFT $\downarrow$ & 0.747 \\
+Reconstruction & Common Voice, fixed 400 clips & MR-STFT $\downarrow$ & 0.747 \\
  & & STOI $\uparrow$ / ESTOI $\uparrow$ & 0.850 / 0.762 \\
  & & PESQ-WB $\uparrow$ & 2.146 \\
 Emotion (linear) & SUBESCO, 5 speaker-group folds, 7,000 utt. & macro-F1 $\uparrow$ & 0.482 \\
@@ -189,130 +185,198 @@ Closed-set speaker ID & 167 speakers, 666 train / 334 test utt. & accuracy $\upa
 Speaker verification & 334 speakers, 2,000 utt., all-pairs, mean+std & EER / minDCF $\downarrow$ & 0.276 / 0.988 \\
 \bottomrule
 \end{tabular}
-\caption{Completed evaluations for the selected 210k checkpoint. ``Temp.'' denotes temporal attention or the temporal Transformer, respectively. Probe values are fixed seed-0 point estimates. The tasks use different datasets and protocols and should not be combined into an overall ranking.}
+\caption{Results for the selected 210k checkpoint. ``Temp.'' denotes temporal attention or the temporal Transformer, respectively. Probe values are fixed seed-0 point estimates. The tasks use different datasets and protocols and should not be combined into an overall ranking.}
 \label{tab:main210k}
 \end{table*}
 
-The table establishes performance only under the stated protocols. Common Voice results are in-domain, and train--evaluation overlap has not been audited. The speaker-identification result is closed-set and does not imply open-set verification performance. The age and gender probes measure label prediction under their speaker-disjoint splits; they do not evaluate fairness or population coverage.
+The table establishes performance only under the stated protocols. Common Voice results are in-domain, and train--evaluation overlap has not been audited. The speaker-identification result is closed-set and does not imply open-set verification performance. The age and gender probes measure label prediction under their speaker-disjoint splits; they do not evaluate fairness or population coverage. The age distribution is highly imbalanced: only two clips have the oldest observed label, and some folds lack rare labels. The 210k age macro-F1 (0.216) is slightly below a training-fold majority-label reference (0.217), so this probe does not establish useful age prediction beyond that reference.
+
+\begin{table*}[t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+Features & Emotion F1 $\uparrow$ & Age F1 $\uparrow$ & Gender F1 $\uparrow$ & Speaker-ID acc. $\uparrow$ & Verification EER $\downarrow$ \\
+\midrule
+CLAE, selected 210k & 0.482 & 0.216 & 0.928 & 0.656 & 0.276 \\
+Majority label & --- & 0.217 & 0.438 & --- & --- \\
+Random CLAE & 0.305 & 0.168 & 0.742 & 0.039 & 0.391 \\
+WavLM & 0.602 & 0.249 & 0.935 & 0.296 & 0.339 \\
+Whisper-tiny & 0.634 & 0.234 & 0.944 & 0.356 & 0.375 \\
+ECAPA & 0.519 & 0.251 & 0.973 & 0.952 & 0.060 \\
+emotion2vec & 0.629 & 0.259 & 0.894 & 0.326 & 0.344 \\
+Mimi & 0.610 & 0.257 & 0.957 & 0.647 & 0.231 \\
+Higgs Audio V2 & 0.452 & 0.235 & 0.928 & 0.725 & 0.186 \\
+\bottomrule
+\end{tabular}
+\caption{Full-data references for the 210k model. The majority-label predictor uses the most frequent training-fold label for each demographic task; dashes mark tasks not evaluated with this reference. Verification uses mean+standard-deviation pooling and the nonstandard all-pairs protocol. Models and tasks have different specializations; the columns should not be averaged into a composite ranking.}
+\label{tab:appendix-baselines-210k}
+\end{table*}
+
+Table~\ref{tab:appendix-baselines-210k} places the 210k encoder against frozen external representations. CLAE improves over the architecture-matched random control on these five tasks, but most pretrained baselines have higher emotion and demographic F1, and ECAPA is stronger on speaker identification and verification. These results support task-specific utility rather than broad superiority. Additional full-data probe aggregates and baseline diagnostics appear in Tables~\ref{tab:appendix-full-suite-a}, \ref{tab:appendix-full-suite-b}, and \ref{tab:appendix-shared-diagnostics}. Training-loss diagnostics for the six matched conditions appear in Figure~\ref{fig:ablation-training-curves}.
 
 \subsection{Matched 25k ablations}
 \label{sec:ablation}
 
-The ablation evidence comes only from the allowed \texttt{clae-full-evaluations3} artifacts. All model conditions stop at 25,000 steps while retaining the base configuration's 100,000-step learning-rate horizon. Available reconstruction aggregates use the same fixed 400 Common Voice Bengali clips in FP32. The temporal-attention probe uses 1,708 training and 392 held-out SUBESCO utterances. The temporal Transformer is a different probe family, not another seed of the attention probe. Each temporal result is a single-seed point estimate.
+Table~\ref{tab:ablation} compares model variants under a fixed training budget in the earlier matched evaluation. All model conditions stop at 25,000 steps while retaining the base configuration's 100,000-step learning-rate horizon. Available reconstruction aggregates use a common fixed-order, 400-clip validation-manifest protocol in FP32. Corpus-membership and pretraining-overlap caveats are the same as for the 210k evaluation. The temporal-attention probe uses 1,708 training and 392 held-out SUBESCO utterances. The temporal Transformer uses four speaker-group folds over 7,000 SUBESCO clips; it is a different probe family, not another seed of the attention probe. Each temporal result is a single-seed point estimate.
 
 \begin{table*}[t]
 \centering
 \small
+\setlength{\tabcolsep}{4pt}
 \begin{tabular}{@{}lrrrrrr@{}}
 \toprule
 Condition & MR-STFT $\downarrow$ & STOI $\uparrow$ & ESTOI $\uparrow$ & PESQ-WB $\uparrow$ & Attn. F1 $\uparrow$ & Transf. F1 $\uparrow$ \\
 \midrule
-Packed base, 25k & 0.850 & 0.828 & 0.715 & 1.970 & 0.341 & 0.441 \\
+Full objective, 25k & 0.850 & 0.828 & 0.715 & 1.970 & 0.341 & 0.441 \\
 Representation-only, 25k & 5.652 & 0.319 & -0.001 & 1.103 & 0.132 & 0.197 \\
 No mHC, 25k & 0.829 & 0.824 & 0.721 & 1.977 & 0.289 & 0.449 \\
 25 Hz, 25k & 0.838 & 0.857 & 0.767 & 2.090 & 0.318 & 0.458 \\
 No decoder corruption, 25k & --- & --- & --- & --- & 0.311 & 0.450 \\
-Mimi, 8 quantizers (nominal 1.1 kbps) & 0.869 & 0.829 & 0.707 & 2.007 & n/a & n/a \\
+Mimi, 8 quantizers & 0.869 & 0.829 & 0.707 & 2.007 & n/a & n/a \\
 \bottomrule
 \end{tabular}
-\caption{Matched 25k-step ablations and the Mimi common-evaluation reconstruction reference. ``Attn.'' denotes the temporal-attention probe and ``Transf.'' the temporal-Transformer probe. A dash means that no completed artifact is available. Mimi is separately pretrained and evaluated here only on the common reconstruction inputs.}
+\caption{Matched 25k-step ablations and the Mimi common-evaluation reconstruction reference. ``Attn.'' denotes the temporal-attention probe and ``Transf.'' the temporal-Transformer probe. Dashes denote the failed reconstruction task in this earlier study. Mimi is separately pretrained, fixes eight quantizers (nominal 1.1 kbps), and is evaluated here only on the common reconstruction inputs.}
 \label{tab:ablation}
 \end{table*}
 
 At this budget, removing reconstruction substantially worsens all four reported reconstruction metrics and both temporal-emotion probe results. This shows the effect of removing the training signal in this setting; it does not establish that $z$ collapsed or that reconstruction is universally necessary. The 25~Hz condition improves STOI, ESTOI, PESQ-WB, and temporal-Transformer F1 relative to the 12.5~Hz base, while doubling the latent frame rate. It is therefore not a matched representation-rate or bitrate comparison.
 
-The mHC result is probe-dependent. Removing mHC slightly lowers MR-STFT and raises temporal-Transformer F1, whereas retaining mHC raises temporal-attention F1. The available evidence does not support a uniform benefit. Packed base and the separately pretrained Mimi reference exhibit a metric-dependent trade-off on common evaluation inputs: packed base is lower on MR-STFT and higher on ESTOI; Mimi is marginally higher on STOI and PESQ-WB. Neither dominates across the reported metrics. Reconstruction-only is absent from this older common-400 artifact, and no completed reconstruction metrics are available for the no-decoder-corruption condition. A separate reduced fixed-subset FP32 comparison includes reconstruction-only (Section~\ref{sec:reduced-fp32}) but uses different sample budgets and must not be merged with these rows.
+The mHC result is probe-dependent. Removing mHC slightly lowers MR-STFT and raises temporal-Transformer F1, whereas retaining mHC raises temporal-attention F1. The available evidence does not support a uniform benefit. Full objective and the separately pretrained Mimi reference exhibit a metric-dependent trade-off on common evaluation inputs: the full-objective model is lower on MR-STFT and higher on ESTOI; Mimi is marginally higher on STOI and PESQ-WB. Neither dominates across the reported metrics. The earlier matched evaluation lacks reconstruction-only results and records a failed no-decoder-corruption reconstruction task. Its missing measurement is not replaced by the later full-suite result in Table~\ref{tab:appendix-full-suite-a}. A separate reduced fixed-subset FP32 comparison includes reconstruction-only (Section~\ref{sec:reduced-fp32}) but uses different sample budgets and must not be merged with these rows.
 
-\section{Limitations}
+\subsection{Reduced fixed-subset comparison}
+\label{sec:reduced-fp32}
 
-There is no active in-loop validation. The 210k results are limited to completed existing artifacts and the reported probe values are fixed-seed point estimates; the 25k temporal ablations also use one probe seed. We report no paired-bootstrap analysis, confidence intervals, statistical significance, stability, or robustness claims. No human listening study was conducted, so reconstruction evidence is limited to objective proxy metrics. There is no controlled VISReg-versus-SIGReg comparison.
-
-The training inventory was not audited for demographic or dialect coverage, deduplication, or leakage. Common Voice and OpenSLR evaluations are in-domain because both sources contribute to pretraining, and their train--evaluation overlap is unknown. The available evaluation artifact does not preserve a paper-ready age-label ontology or trivial baseline, which limits interpretation of the age probe. The all-pairs speaker-verification protocol is not a standard enrollment/test benchmark. We draw no conclusion about linguistic retention. The 25~Hz ablation changes frame rate, and mHC effects are mixed. VISReg and mHC are recent preprints used through project-specific adaptations; the reported findings concern the exact local implementation and configuration.
-
-\section{Conclusion}
-
-CLAE is a compact 12.5~Hz continuous Bengali speech representation encoder trained with reconstruction as an auxiliary self-supervised information-retention objective, non-contrastive global/local view consistency for nuisance invariance, and frame-level VISReg for anti-collapse and distribution regularization. Under the reported protocols, its frozen features support the selected downstream discrimination tasks; this is evidence for a candidate general-purpose Bengali speech representation within the evaluated scope, not for encoder fine-tuning or a broad foundation-model claim. The matched 25k study shows a setting-specific benefit from retaining reconstruction, a frame-rate trade-off at 25~Hz, mixed mHC effects, and a metric-dependent comparison with Mimi. CLAE remains continuous and is not bitrate-comparable to quantized codecs. These conclusions do not extend beyond the completed tasks and artifacts.
-
-\bibliography{custom}
-
-\appendix
-\section{Complete Published Evaluation Tables}
-
-The tables below retain completed scalar results from the audited \texttt{clae-full-evaluations2} and \texttt{clae-full-evaluations3} artifacts. Missing directories, skipped tasks, failed evaluations without result files, and support-only caches are not converted into results. A reported $\pm$ value is the sample standard deviation across saved stochastic probe seeds, not a confidence interval. The deterministic linear probes produced identical scalar values across their nominal seeds and are therefore shown as point estimates.
-
-\subsection{Evaluation implementation and reproducibility}
-
-The selected model is the terminal step-210,000 checkpoint \nolinkurl{runs/large-2kh-packed-210k-tail-lr-1e4/checkpoints/last.pt}. CLAE probes use only the frozen final frontend--encoder output $z$ (256 dimensions at 12.5~Hz): they neither combine encoder layers nor use the projector $p$. Evaluation audio is mixed to mono and resampled to 16~kHz. For CLAE feature extraction, a clip is split into non-overlapping segment-length windows, the final window is right-padded, and frame features are concatenated before pooling; this avoids applying the globally attentive encoder to an out-of-distribution long window. Utterance probes use mean+standard-deviation pooling unless noted; speaker ID uses mean pooling, and verification evaluates both mean and mean+standard-deviation pooling. Pooling excludes known right-padding frames when a duration is available.
+Table~\ref{tab:reduced-fp32-clae} reports a separate reduced study; its scores do not replace or extend the preceding full-data rows. It uses one fixed seed (data, split, and probe seed 0 where applicable) and FP32 CLAE inference with CUDA autocast disabled. Reconstruction uses 100 three-second clips; generic and temporal emotion use the same 1,400 SUBESCO clips, with 20 training epochs for the temporal probes; age and gender each use 2,000 Common Voice clips; speaker identification uses 500 OpenSLR-53 clips; and verification uses 800 OpenSLR-53 clips with 20,000 fixed trials. ASR was deliberately not evaluated. All values are descriptive one-seed outcomes without confidence intervals, error bars, significance tests, or claims of robustness.
 
 \begin{table*}[t]
 \centering
 \scriptsize
-\setlength{\tabcolsep}{3.2pt}
-\begin{tabular}{@{}p{1.6cm}p{2.1cm}p{2.5cm}p{8.4cm}@{}}
+\setlength{\tabcolsep}{1.8pt}
+\begin{tabular}{@{}lrrrrrrrrrr@{}}
 \toprule
-Evaluation & Split and pooling & Head / score & Fixed full-suite protocol \\
+Condition & STFT $\downarrow$ & PESQ $\uparrow$ & STOI $\uparrow$ & Emo. F1 $\uparrow$ & Age F1 $\uparrow$ & Gender F1 $\uparrow$ & Spk-ID acc. $\uparrow$ & Temp. F1 $\uparrow$ & Transf. F1 $\uparrow$ & EER $\downarrow$ \\
 \midrule
-Reconstruction & Fixed manifest order; valid unpadded prefix & FP32 encoder--decoder; MR-STFT, waveform L1, STOI, ESTOI, PESQ-WB & 8 clips/batch $\times$ 50 batches; 3-s clips; shared four-resolution STFT contract. \\
-Emotion, age, gender & 5 speaker-group folds; mean+std & Standardized logistic regression ($C=1$, 3,000 iterations); age uses balanced class weights & All available SUBESCO clips for emotion; all available labelled Common Voice clips for age and gender; data/split/probe seeds 0. \\
-Speaker ID & Per-speaker held-out utterances; mean & Standardized multinomial logistic regression ($C=1$, 3,000 iterations) & Up to 1,000 OpenSLR-53 clips; two test utterances per speaker; seeds 0. \\
-Verification & All upper-triangle pairs; mean and mean+std & Cosine score, EER and minDCF ($P_{\mathrm{target}}=0.01$) & Up to 2,000 OpenSLR-53 clips; no trial cap; data/split seeds 0. \\
-Attention ASR & Frozen frame sequence; no utterance pool & 2-layer, 4-head attention decoder ($d=256$, FFN 1,024) & Up to 10,000 train and dev items; 8,000 updates, batch 16; each input is duration-validated at 15~s, encoded in 3-s padded windows and concatenated; seed 0. \\
-Temporal emotion & Frozen frame sequence, capped at 300 frames & Attentive statistics head (128 hidden units; batch 64) or 4-fold Transformer classifier & Attention: fixed held-out speakers F\_09, F\_10, M\_09, M\_10, 40 epochs. Transformer: speaker-group folds, 30 epochs. Both use seed 0 when enabled. \\
+Full objective, 25k & 0.8679 & 1.983 & 0.837 & 41.59 & 26.11 & 93.23 & 67.66 & 35.21 & 42.30 & 27.91 \\
+Reconstruction only, 25k & 0.8705 & 2.052 & 0.842 & \textbf{43.89} & 25.89 & 93.32 & 68.26 & 34.97 & 41.13 & 26.50 \\
+Representation only, 25k & 4.2770 & 1.115 & 0.323 & 30.21 & 21.03 & 90.59 & 25.75 & 17.57 & 19.13 & 38.92 \\
+No mHC, 25k & 0.8560 & 2.013 & 0.835 & 41.15 & 24.69 & 94.13 & 69.46 & 30.29 & 39.55 & 27.51 \\
+25 Hz, 25k & 0.8419 & 2.139 & 0.865 & 43.74 & 24.77 & \textbf{95.08} & 70.66 & 32.41 & 43.37 & \textbf{23.84} \\
+No decoder corruption, 25k & 0.7888 & \textbf{2.336} & \textbf{0.882} & 43.27 & \textbf{27.19} & 93.24 & \textbf{73.65} & \textbf{36.72} & \textbf{43.56} & 30.97 \\
+CLAE, 210k & \textbf{0.7745} & 2.167 & 0.859 & 43.21 & 24.16 & 94.60 & 65.87 & 35.59 & 42.42 & 27.11 \\
 \bottomrule
 \end{tabular}
-\caption{Implemented evaluation protocol. The full-suite launcher defaults to one seed (0), its original full-data limits, and no temporal-emotion tasks; temporal tasks require explicit selection. The separate reduced-suite results below use their stated smaller fixed subsets.}
-\label{tab:appendix-evaluation-protocol}
+\caption{Reduced fixed-subset FP32 CLAE evaluation. Classification scores and EER are percentages. Bold marks the best descriptive CLAE result per column, not a statistically established winner; external and majority-label references are reported separately. ASR was not evaluated.}
+\label{tab:reduced-fp32-clae}
 \end{table*}
 
-External representations are frozen and pinned to revisions: WavLM-base-plus (\nolinkurl{4c66d4806a428f2e922ccfa1a962776e232d487b}) and Whisper-tiny (\nolinkurl{169d4a4341b33bc18d8881c4b69c2e104e1cc0af}) use final hidden states; WavLM is final-layer only, not a learned weighted layer aggregation. ECAPA (\nolinkurl{0f99f2d0ebe89ac095bcc5903c4dd8f72b367286}) uses its utterance embedding; emotion2vec (\nolinkurl{0c9a3152734f9d7a7a05b4ee6bfb3c109d288664}) uses continuous FunASR frame features; Mimi (\nolinkurl{89091b3e466eb6a9d11e537bf26b144f194978f7}) uses its continuous pre-quantization latent; and Higgs Audio V2 uses \nolinkurl{bosonai/higgs-audio-v2-tokenizer} at revision \nolinkurl{403fbacf2f60caaa102f893fdfabb694619b2417} and decodes its quantizer output to continuous vectors. No codec probe substitutes integer code IDs for continuous features. The separate Mimi reconstruction comparator fixes eight quantizers (nominal 1.1~kbps), rather than reusing the pre-quantization probe feature.
+CLAE at 210k steps has the lowest STFT loss, while the 25k no-decoder-corruption condition leads PESQ, STOI, age, speaker identification, and both temporal-emotion probes among CLAE conditions. In the direct reduced comparison, reconstruction-only leads generic emotion descriptively (43.89 vs.~41.59 macro-F1), whereas the full-objective model is slightly higher on age (26.11 vs.~25.89) and the two temporal probes (35.21 vs.~34.97 and 42.30 vs.~41.13). These one-seed differences are small and mixed, so they do not demonstrate a uniform benefit of the view-consistency-plus-VISReg branch. The 25~Hz condition leads gender and verification. All CLAE age macro-F1 values in this reduced study are below the majority-label reference (27.42\%); this limits any claim of demographic utility. Representation-only is a negative reconstruction control and also trails the other trained CLAE conditions on every representation task in this reduced protocol.
 
-The 210k run directory, including its referenced \texttt{config.yaml}, is not present in this project snapshot. Frozen CLAE feature probes remain reconstructible from the checkpoint-embedded \texttt{cfg}; by contrast, the reconstruction and attention-ASR entry points take a separate configuration path, so a literal rerun of those commands also requires that missing configuration artifact.
+Whisper-tiny leads generic emotion, Mimi leads age, and ECAPA leads gender, closed-set speaker identification, and verification. WavLM has the strongest configured temporal-Transformer baseline. The eight-quantizer Mimi reconstruction reference obtains STFT 0.8949 on the same 100 clips. Table~\ref{tab:reduced-fp32-baselines} reports the external-reference scores for this protocol.
 
-\subsection{Matched 25k ablation coverage}
+\section{Limitations}
 
-Table~\ref{tab:ablation} reports every completed scalar result from the matched 25k common-400 artifact set. The suite was intended to contain six model conditions, but its reconstruction-only upload is absent. The no-decoder-corruption condition has completed temporal-emotion probes, while its reconstruction task recorded failure without a result file. Ordinary ASR, emotion, and gender probes were explicitly skipped throughout this older ablation set. These statuses explain the dashes in Table~\ref{tab:ablation}; they are not zero scores; they do not imply that reconstruction-only was never evaluated under a separate protocol.
+Training did not use validation-based model selection. The main 210k probe results and the matched 25k temporal ablations use one probe seed. We report no paired-bootstrap analysis, confidence intervals, statistical significance, stability, or robustness claims. No human listening study was conducted, so reconstruction evidence is limited to objective proxy metrics. The saved SI-SDR measurements are unexpectedly low (about $-23$ to $-25$ dB for reconstruction-capable CLAE conditions in the reduced study, versus $+2.05$ dB for Mimi). Their disagreement with the spectral and intelligibility proxies remains unresolved; we withhold SI-SDR from the comparison tables pending a waveform-alignment and phase-fidelity investigation. The remaining metrics do not establish sample-level waveform fidelity. We did not compare alternative distribution regularizers under a controlled protocol.
 
-\begin{table}[h]
+The training inventory was not audited for demographic or dialect coverage, deduplication, or leakage. Common Voice and OpenSLR evaluations are in-domain because both sources contribute to pretraining, and their train--evaluation overlap is unknown. Demographic probes predict dataset-supplied labels rather than independently verified age or gender. The exact corpus releases and training--evaluation overlap remain insufficiently documented, limiting interpretation beyond these samples. The all-pairs speaker-verification protocol is not a standard enrollment/test benchmark. We draw no conclusion about linguistic retention. The 25~Hz ablation changes frame rate, and mHC effects are mixed. VISReg and mHC are recent preprints used through project-specific adaptations; the reported findings concern the exact local implementation and configuration.
+
+\section{Ethical Considerations}
+
+Speech can identify speakers and reveal sensitive attributes. The age and gender probes measure predictability of corpus labels; they do not validate those labels as a complete account of identity or justify individual-level decisions. Speaker representations can enable unauthorized identification, surveillance, or impersonation. These research evaluations do not establish suitability for deployment in such settings. Bengali speech and acted-emotion results also should not be generalized to unrepresented dialects, populations, or spontaneous emotion.
+
+The study uses third-party speech corpora. Their availability does not by itself establish consent for demographic inference or speaker identification. The corpus-specific consent terms, release versions, and redistribution permissions require verification before any audio redistribution; this paper makes no claim that those permissions have been independently audited. No new human listening study or participant recruitment was conducted.
+
+\paragraph{Availability.}
+We plan to release the source code, evaluation recipes, and model checkpoints through a public repository. Dataset manifests will not be released. Third-party audio must be obtained from its providers under the applicable terms. The absence of released manifests will limit exact reconstruction of the sampled subsets; the paper therefore records sample counts, label inventories, and split fingerprints where available.
+
+\section{Conclusion}
+
+CLAE is a compact 12.5~Hz continuous Bengali speech representation encoder trained with reconstruction as an auxiliary self-supervised information-retention objective, non-contrastive global/local view consistency for nuisance invariance, and frame-level VISReg for anti-collapse and distribution regularization. Its frozen features support emotion and speaker discrimination under the evaluated protocols, while the age probe does not outperform the majority-label reference in macro-F1. The matched 25k study shows a setting-specific benefit from retaining reconstruction, a frame-rate trade-off at 25~Hz, mixed mHC effects, and a metric-dependent comparison with Mimi. The reconstruction-only comparison gives mixed evidence for adding the view-consistency and VISReg branch. CLAE remains continuous and is not bitrate-comparable to quantized codecs. Broader task coverage and repeated-training experiments are needed to assess generality.
+
+\bibliographystyle{acl_natbib}
+\bibliography{custom}
+\clearpage
+
+\appendix
+\section{Replication Details}
+\label{sec:replication}
+
+CLAE probes use frozen final encoder features $z$, without layer aggregation or projector features. Audio is mixed to mono and resampled to 16 kHz. CLAE encodes non-overlapping three-second windows, right-pads the final window, and concatenates their frames. Generic utterance probes pool all returned frames, including final-window padding. Reconstruction instead scores the valid waveform prefix when duration is recorded. The two paths therefore have distinct padding conventions.
+
+\subsection{Data selection and labels}
+
+The demographic loader reads the first sorted local \texttt{validated.tsv}, retains existing audio with nonempty speaker IDs and raw labels, and shuffles eligible rows with the data seed before applying the utterance cap. It neither merges nor corrects labels. Demographic prediction files omit the Common Voice release. Table~\ref{tab:demographic-labels} preserves the raw spelling \texttt{fourties}. Full and reduced age sets contain different classes.
+
+\begin{table}[!ht]
 \centering
-\footnotesize
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{@{}lll@{}}
+\small
+\begin{tabular}{@{}lrr@{}}
 \toprule
-25k condition & Reconstruction & Temporal probes \\
+Raw label & Full & Reduced \\
 \midrule
-Packed base & complete & complete \\
-Representation only & complete & complete \\
-No mHC & complete & complete \\
-25 Hz & complete & complete \\
-No decoder corruption & no result file & complete \\
-Reconstruction only & absent & absent \\
+Age: teens & 1,690 & 197 \\
+twenties & 12,739 & 1,674 \\
+thirties & 871 & 113 \\
+fourties & 173 & 16 \\
+fifties & 2 & 0 \\
+\midrule
+Gender: female\_feminine & 3,169 & 399 \\
+male\_masculine & 12,521 & 1,601 \\
 \bottomrule
 \end{tabular}
-\caption{Artifact coverage for the older matched 25k common-400 ablation suite. ``Complete'' means that the corresponding result artifact exists in that suite; the separate reduced fixed-subset FP32 suite has its own coverage and rows.}
-\label{tab:appendix-ablation-coverage}
+\caption{Gold-label counts in the saved out-of-fold predictions. Full/reduced age sets contain 1,580/665 speakers; gender sets contain 1,583/676 speakers.}
+\label{tab:demographic-labels}
 \end{table}
 
-\begin{figure*}[t]
-\centering
-\includegraphics[width=\textwidth]{figures/tikz/ablation_training_curves.pdf}
-\caption{Unsmoothed W\&B training histories for the six matched 25k conditions. Panels (b)--(d) show raw component values, not weighted contributions to the total objective. The dashed reconstruction curve for representation-only and dashed representation curves for reconstruction-only were logged diagnostically but had zero objective weight. These are training diagnostics, not validation curves or evidence of generalization.}
-\label{fig:ablation-training-curves}
-\end{figure*}
+Generic emotion uses five speaker-group folds on SUBESCO. The full temporal-attention evaluation uses 2,100 clips with 1,708 training and 392 test items; the reduced version uses 1,400 clips with 1,118 training and 282 test items. Both hold out speakers F\_09, F\_10, M\_09, and M\_10. The Transformer uses four speaker-group folds. Full speaker ID has 167 enrolled speakers and two held-out utterances per speaker (666 training, 334 test). The reduced set has 500 clips with the same within-speaker holdout rule. These splits separate probe training from testing, not necessarily pretraining from evaluation.
 
-\begin{table*}[t]
+\subsection{Probe and metric definitions}
+
+Linear probes standardize features using each training fold and fit logistic regression with $C=1$ and a 3,000-iteration limit; both age and gender use balanced class weights. Speaker ID uses mean pooling; generic emotion, age, and gender use mean+standard-deviation pooling. Reported classification scores are arithmetic means of per-fold scores. Macro-F1 uses labels present in the fold's gold labels or predictions, as in the evaluator's default scoring; balanced accuracy averages recall over gold labels present in that fold. Rare-class absence therefore changes the set of scored labels across folds.
+
+The majority-label reference is computed from saved out-of-fold gold labels without feature extraction or model fitting. For each held-out fold, the most frequent label in the other folds is predicted for every test item, and scores are averaged over folds using the same conventions. The majority is \texttt{twenties} for age and \texttt{male\_masculine} for gender in every fold. Full/reduced age balanced accuracy is 0.240/0.300 and macro-F1 is 0.216701/0.274245; gender balanced accuracy is 0.500 in both and macro-F1 is 0.437859/0.443730. Recomputing the saved CLAE predictions under this scoring convention reproduces their reported macro-F1.
+
+Reconstruction runs in FP32 and scores each valid source prefix before averaging over clips. MR-STFT uses FFT sizes $[256,512,1024,2048]$, hop length one quarter of each FFT size, full-length Hann windows, centered analysis, and log-magnitude epsilon $10^{-3}$. Spectral-convergence, magnitude, and log-magnitude weights are $0.1$, $1$, and $1$, respectively. STOI and ESTOI use \texttt{pystoi}; wide-band PESQ uses \texttt{pesq} at 16 kHz. The selected reconstruction outputs record successful coverage for every requested metric on all 400 or 100 items. Coverage establishes computation, not perceptual validity; the unresolved SI-SDR issue is discussed in the main text.
+
+Verification uses cosine similarity on mean or mean+standard-deviation embeddings; the tables select mean+standard-deviation pooling. Full evaluation scores all unique pairs of 2,000 utterances from 334 speakers. Reduced evaluation has 800 utterances from 134 speakers, with 1,996 target and 18,004 nontarget trials. The capped sampler preferentially retains target pairs before sampling nontarget pairs; it is not uniform all-pairs subsampling. EER averages false-positive and false-negative rates at the nearest ROC crossing. Normalized minDCF uses target prior 0.01 and unit miss/false-alarm costs.
+
+The attention-ASR implementation uses a two-layer, four-head Transformer decoder ($d=256$, feed-forward dimension 1,024), batch size 16, and an 8,000-update budget. Candidate audio is duration-validated at 15 seconds, encoded in three-second windows, and concatenated without utterance pooling. The full-data development prediction artifact contains 10,000 items. CER and WER are error ratios, so WER may exceed one. These are fixed-budget development-set diagnostics, not a held-out ASR benchmark.
+
+Temporal recipes use a 300-frame cap; the attentive-statistics head has 128 hidden units and batch size 64. The full-suite recipe specifies 40 attention epochs and 30 Transformer epochs; the reduced study report specifies 20 epochs for both. Not all historical optimizer and stopping settings survive in scalar-result metadata, so implementation defaults alone do not establish an exact historical rerun. Full neural-probe aggregates use probe seeds 0/1/2 with fixed data/split seeds 0; main and reduced comparisons use probe seed 0. Deterministic linear-probe repeats have identical scalar scores and are not treated as independent training replications.
+
+
+External feature extractors remain frozen: WavLM-base-plus and Whisper-tiny use final hidden states; WavLM is final-layer only, not a learned weighted layer aggregation. ECAPA uses its utterance embedding; emotion2vec uses continuous FunASR frame features; Mimi uses its continuous pre-quantization latent; and Higgs Audio V2 decodes its quantizer output to continuous vectors. No codec probe substitutes integer code IDs for continuous features. The separate Mimi reconstruction comparator fixes eight quantizers (nominal 1.1~kbps), rather than reusing the pre-quantization probe feature.
+
+
+
+\subsection{Model identities and reproducibility limits}
+
+External adapters pin the following Hub revisions: WavLM-base-plus, \texttt{4c66d480\allowbreak{}6a428f2e\allowbreak{}922ccfa1\allowbreak{}a962776e\allowbreak{}232d487b}; Whisper-tiny, \texttt{169d4a43\allowbreak{}41b33bc1\allowbreak{}8d8881c4\allowbreak{}b69c2e10\allowbreak{}4e1cc0af}; ECAPA, \texttt{0f99f2d0\allowbreak{}ebe89ac0\allowbreak{}95bcc590\allowbreak{}3c4dd8f7\allowbreak{}2b367286}; emotion2vec, \texttt{0c9a3152\allowbreak{}734f9d7a\allowbreak{}7a05b4ee\allowbreak{}6bfb3c10\allowbreak{}9d288664}; Mimi, \texttt{89091b3e\allowbreak{}466eb6a9\allowbreak{}d11e537b\allowbreak{}f26b144f\allowbreak{}194978f7}; and \nolinkurl{bosonai/higgs-audio-v2-tokenizer}, \texttt{403fbacf\allowbreak{}2f60caaa\allowbreak{}102f893f\allowbreak{}dfabb694\allowbreak{}619b2417}.
+
+The selected checkpoint is identified by the run suffix \texttt{210k-tail-lr-1e4} and terminal step 210,000. The matched conditions use step-25,000 checkpoints; historical filenames containing \texttt{50k} are retained run names, not their evaluated training endpoints. Their configuration endpoint is 25,000 with a 100,000-step scheduler horizon. The training configuration records seed 42, AdamW with $\beta=(0.9,0.999)$, epsilon $10^{-8}$, weight decay $10^{-5}$, and 5,000 warmup steps. Full-objective loss weights are $1/0.3/0.7$ for reconstruction/view/VISReg; reconstruction-only sets the latter two to zero, and representation-only sets the first to zero. No-mHC disables mHC; 25 Hz changes the frontend/decoder stride product to 640; no-decoder-corruption disables its mask and noise.
+
+The available results identify checkpoints by paths and steps rather than immutable weight digests. Reduced-suite staging filenames differ from full-suite run paths, so exact cross-suite weight identity has not been independently verified. The selected run's separate resolved configuration is absent from the local evidence snapshot. Checkpoint-embedded configuration supports the frozen-feature adapters, but the reconstruction and attention-ASR entry points also require a separate configuration file. Hardware history and a complete pinned historical software environment are not available. These limitations prevent a claim of exact end-to-end reproducibility.
+
+For identifying the demographic partitions, full age/gender split fingerprints are, respectively, \texttt{ef5a12b6\allowbreak{}6a66c4a6\allowbreak{}1a1f9e5a\allowbreak{}4b907a7e\allowbreak{}53f3b08b\allowbreak{}ef5e5147\allowbreak{}ae607f2e\allowbreak{}2a2def62} and \texttt{5f13ef4d\allowbreak{}a550a470\allowbreak{}843e5124\allowbreak{}01709210\allowbreak{}4c06c4ce\allowbreak{}f98db732\allowbreak{}a05b700d\allowbreak{}927172c7}. Reduced age/gender fingerprints are \texttt{08d489be\allowbreak{}6927530a\allowbreak{}6fc144df\allowbreak{}52e514da\allowbreak{}f6a5598e\allowbreak{}e03c42a4\allowbreak{}c908bb5f\allowbreak{}a41d4daa} and \texttt{cc898ed2\allowbreak{}72c53ec2\allowbreak{}9ed85919\allowbreak{}bbddd4da\allowbreak{}da217281\allowbreak{}507534ed\allowbreak{}ef4d55a5\allowbreak{}9905b639}. Fingerprints identify the saved partitions but cannot reconstruct unreleased manifests.
+
+\clearpage
+\begin{table*}[p]
+\section{Complementary Results}
+\label{sec:complementary}
 \centering
 \scriptsize
 \setlength{\tabcolsep}{3.2pt}
 \begin{tabular}{@{}lrrrrrrr@{}}
 \toprule
-Full-suite condition & MR-STFT $\downarrow$ & CER $\downarrow$ & WER $\downarrow$ & Attn. F1 $\uparrow$ & Transf. F1 $\uparrow$ & EER $\downarrow$ & minDCF $\downarrow$ \\
+Model condition & MR-STFT $\downarrow$ & CER $\downarrow$ & WER $\downarrow$ & Attn. F1 $\uparrow$ & Transf. F1 $\uparrow$ & EER $\downarrow$ & minDCF $\downarrow$ \\
 \midrule
 No decoder corruption, 25k & 0.775 & $0.790\pm0.020$ & $1.106\pm0.027$ & $0.301\pm0.011$ & $0.525\pm0.007$ & 0.319 & 0.988 \\
-Representation only, 25k & 5.781 & $0.899\pm0.019$ & $1.103\pm0.042$ & $0.159\pm0.024$ & $0.227\pm0.006$ & 0.387 & 1.000 \\
-Packed selected model, 210k & 0.747 & $0.795\pm0.010$ & $1.116\pm0.014$ & $0.341\pm0.017$ & $0.508\pm0.008$ & 0.276 & 0.988 \\
+Representation only, 25k & 5.781 & $0.899\pm0.019$ & $1.103\pm0.042$ & $0.159\pm0.024$ & $0.227\pm0.005$ & 0.387 & 0.999 \\
+CLAE, 210k & 0.747 & $0.795\pm0.010$ & $1.116\pm0.014$ & $0.341\pm0.017$ & $0.508\pm0.008$ & 0.276 & 0.988 \\
 \bottomrule
 \end{tabular}
-\caption{Completed full-suite reconstruction, ASR, temporal-emotion, and speaker-verification results. EER and minDCF use mean+standard-deviation pooling. These three conditions are complete in the published full-suite artifacts; the other nominal conditions have no complete full-suite result set.}
+\caption{Selected full-data reconstruction, ASR, temporal-emotion, and speaker-verification results. For neural probes, $\pm$ denotes sample SD across probe seeds 0, 1, and 2 with fixed data/split seeds 0; it is not a confidence interval or variability across pretrained encoders. EER and minDCF use mean+standard-deviation pooling. These results cover three model conditions; training budgets are indicated in each row.}
 \label{tab:appendix-full-suite-a}
 \end{table*}
 
@@ -322,14 +386,14 @@ Packed selected model, 210k & 0.747 & $0.795\pm0.010$ & $1.116\pm0.014$ & $0.341
 \setlength{\tabcolsep}{3.5pt}
 \begin{tabular}{@{}lrrrrrrr@{}}
 \toprule
-Full-suite condition & Emotion acc. & Emotion F1 & Age bal. acc. & Age F1 & Gender bal. acc. & Gender F1 & Speaker-ID acc. \\
+Model condition & Emotion acc. & Emotion F1 & Age bal. acc. & Age F1 & Gender bal. acc. & Gender F1 & Speaker-ID acc. \\
 \midrule
-No decoder corruption, 25k & 0.482 & 0.478 & 0.286 & 0.222 & 0.948 & 0.924 & 0.713 \\
+No decoder corruption, 25k & 0.482 & 0.478 & 0.286 & 0.222 & 0.947 & 0.924 & 0.713 \\
 Representation only, 25k & 0.360 & 0.350 & 0.231 & 0.153 & 0.939 & 0.889 & 0.162 \\
-Packed selected model, 210k & 0.489 & 0.482 & 0.259 & 0.216 & 0.954 & 0.928 & 0.656 \\
+CLAE, 210k & 0.489 & 0.482 & 0.259 & 0.216 & 0.954 & 0.928 & 0.656 \\
 \bottomrule
 \end{tabular}
-\caption{Completed deterministic linear-probe results from the same full-suite artifacts. Emotion uses SUBESCO; age and gender use Common Voice Bengali with speaker-disjoint splits; speaker identification is closed-set.}
+\caption{Deterministic linear-probe results under the same evaluation protocol. Emotion uses SUBESCO; age and gender use Common Voice Bengali with speaker-disjoint splits; speaker identification is closed-set.}
 \label{tab:appendix-full-suite-b}
 \end{table*}
 
@@ -347,59 +411,9 @@ Temporal emotion & Random CLAE & Attention acc. 0.283 & Attention F1 0.229 & Tra
 Temporal emotion & WavLM & Attention acc. 0.413 & Attention F1 0.372 & Transformer acc. 0.612 & Transformer F1 0.610 \\
 \bottomrule
 \end{tabular}
-\caption{Completed shared-baseline diagnostics from the published full-suite extraction. These rows use different evaluators and are grouped only to preserve the remaining completed scalar results compactly.}
+\caption{Additional reconstruction, development-set ASR, and temporal-emotion baseline results (probe seed 0). Each row is specific to its stated task and metric.}
 \label{tab:appendix-shared-diagnostics}
 \end{table*}
-
-\begin{table*}[t]
-\centering
-\scriptsize
-\setlength{\tabcolsep}{3.5pt}
-\begin{tabular}{@{}lrrrrr@{}}
-\toprule
-Features & Emotion F1 $\uparrow$ & Age F1 $\uparrow$ & Gender F1 $\uparrow$ & Speaker-ID acc. $\uparrow$ & Verification EER $\downarrow$ \\
-\midrule
-CLAE, selected 210k & 0.482 & 0.216 & 0.928 & 0.656 & 0.276 \\
-Random CLAE & 0.305 & 0.168 & 0.742 & 0.039 & 0.391 \\
-WavLM & 0.602 & 0.249 & 0.936 & 0.296 & 0.339 \\
-Whisper-tiny & 0.634 & 0.234 & 0.944 & 0.356 & 0.375 \\
-ECAPA & 0.519 & 0.251 & 0.973 & 0.952 & 0.060 \\
-emotion2vec & 0.629 & 0.259 & 0.894 & 0.326 & 0.344 \\
-Mimi & 0.610 & 0.257 & 0.957 & 0.647 & 0.231 \\
-Higgs Audio V2 & 0.452 & 0.235 & 0.929 & 0.725 & 0.186 \\
-\bottomrule
-\end{tabular}
-\caption{External-baseline comparison accompanying the published 210k evaluation. Verification uses mean+standard-deviation pooling and the nonstandard all-pairs protocol. Models and tasks have different specializations; the columns should not be averaged into a composite ranking.}
-\label{tab:appendix-baselines-210k}
-\end{table*}
-
-\section{Reduced Fixed-Subset FP32 Evaluation}
-\label{sec:reduced-fp32}
-
-This study is separate from the preceding full-data evaluation and does not replace or extend its rows. It uses one fixed seed (data, split, and probe seed 0 where applicable) and FP32 CLAE inference with CUDA autocast disabled. Reconstruction uses 100 three-second clips; generic and temporal emotion use the same 1,400 SUBESCO clips, with 20 training epochs for the temporal probes; age and gender each use 2,000 Common Voice clips; speaker identification uses 500 OpenSLR-53 clips; and verification uses 800 OpenSLR-53 clips with 20,000 fixed trials. ASR was deliberately not evaluated. All values are descriptive one-seed outcomes without confidence intervals, error bars, significance tests, or claims of robustness.
-
-\begin{table*}[t]
-\centering
-\scriptsize
-\setlength{\tabcolsep}{2.4pt}
-\begin{tabular}{@{}lrrrrrrrrrr@{}}
-\toprule
-Condition & STFT $\downarrow$ & PESQ $\uparrow$ & STOI $\uparrow$ & Emo. F1 $\uparrow$ & Age F1 $\uparrow$ & Gender F1 $\uparrow$ & Spk-ID acc. $\uparrow$ & Temp. F1 $\uparrow$ & Transf. F1 $\uparrow$ & EER $\downarrow$ \\
-\midrule
-Packed base, 25k & 0.8679 & 1.983 & 0.837 & 41.59 & 26.11 & 93.23 & 67.66 & 35.21 & 42.30 & 27.91 \\
-Reconstruction only, 25k & 0.8705 & 2.052 & 0.842 & \textbf{43.89} & 25.89 & 93.32 & 68.26 & 34.97 & 41.13 & 26.50 \\
-Representation only, 25k & 4.2770 & 1.115 & 0.323 & 30.21 & 21.03 & 90.59 & 25.75 & 17.57 & 19.13 & 38.92 \\
-No mHC, 25k & 0.8560 & 2.013 & 0.835 & 41.15 & 24.69 & 94.13 & 69.46 & 30.29 & 39.55 & 27.51 \\
-25 Hz, 25k & 0.8419 & 2.139 & 0.865 & 43.74 & 24.77 & \textbf{95.08} & 70.66 & 32.41 & 43.37 & \textbf{23.84} \\
-No decoder corruption, 25k & 0.7888 & \textbf{2.336} & \textbf{0.882} & 43.27 & \textbf{27.19} & 93.24 & \textbf{73.65} & \textbf{36.72} & \textbf{43.56} & 30.97 \\
-Packed selected model, 210k & \textbf{0.7745} & 2.167 & 0.859 & 43.21 & 24.16 & 94.60 & 65.87 & 35.59 & 42.42 & 27.11 \\
-\bottomrule
-\end{tabular}
-\caption{Reduced fixed-subset FP32 CLAE evaluation. Classification scores and EER are percentages. The bold value is the best descriptive result in each column, not a statistically established winner. ASR was not evaluated.}
-\label{tab:reduced-fp32-clae}
-\end{table*}
-
-Packed 210k has the lowest STFT loss, while the 25k no-decoder-corruption condition has the strongest PESQ, STOI, age, speaker-identification, and both temporal-emotion results. In the direct reduced comparison, reconstruction-only leads generic emotion descriptively (43.89 vs.~41.59 macro-F1), whereas packed base is slightly higher on age (26.11 vs.~25.89) and the two temporal probes (35.21 vs.~34.97 and 42.30 vs.~41.13). These one-seed differences are small and mixed, so they do not demonstrate a uniform benefit of the view-consistency-plus-VISReg branch. The 25~Hz condition leads gender and verification. Representation-only is a negative reconstruction control and also trails the other trained CLAE conditions on every representation task in this reduced protocol.
 
 \begin{table*}[t]
 \centering
@@ -409,6 +423,7 @@ Packed 210k has the lowest STFT loss, while the 25k no-decoder-corruption condit
 \toprule
 Features & Emotion F1 $\uparrow$ & Age F1 $\uparrow$ & Gender F1 $\uparrow$ & Spk-ID acc. $\uparrow$ & Temp. F1 $\uparrow$ & Transf. F1 $\uparrow$ & EER $\downarrow$ \\
 \midrule
+Majority label & --- & 27.42 & 44.37 & --- & --- & --- & --- \\
 Random CLAE & 28.85 & 23.41 & 67.45 & 7.78 & 22.67 & 26.41 & 38.33 \\
 WavLM & 53.36 & 25.57 & 94.93 & 34.13 & 31.53 & \textbf{47.59} & 34.19 \\
 Whisper-tiny & \textbf{59.79} & 27.22 & 97.16 & 38.32 & --- & --- & 37.93 \\
@@ -418,74 +433,15 @@ Mimi & 56.62 & \textbf{30.39} & 95.85 & 67.66 & --- & --- & 22.85 \\
 Higgs Audio V2 & 42.37 & 23.80 & 94.47 & 74.85 & --- & --- & 18.34 \\
 \bottomrule
 \end{tabular}
-\caption{External representations on the same reduced fixed subsets. Temporal probes were configured only for random CLAE and WavLM. Dashes mean not evaluated, not zero. Model specializations differ, so columns should not be averaged into a composite ranking.}
+\caption{External representations and a demographic majority-label reference on the reduced fixed subsets. Temporal probes were configured only for random CLAE and WavLM. Dashes mean not evaluated, not zero. Model specializations differ, so columns should not be averaged into a composite ranking.}
 \label{tab:reduced-fp32-baselines}
 \end{table*}
 
-Whisper-tiny leads generic emotion, Mimi leads age, and ECAPA leads gender, closed-set speaker identification, and verification. WavLM has the strongest configured temporal-Transformer baseline. The pinned eight-quantizer Mimi common-evaluation reconstruction reference obtains STFT 0.8949 on the same 100 clips.
-
-\clearpage
-\section{Intermediate 170k Checkpoint Evaluation}
-
-The updated supervisor report records an evaluation of the 170,000-step intermediate checkpoint from the same training trajectory that later ended at 210,000 steps. It is retained for trajectory provenance but must not be relabeled as a 210k checkpoint result or mixed numerically with Tables~\ref{tab:main210k} and \ref{tab:appendix-baselines-210k}. The report predates the current ASR duration-validation path, so its ASR measurements remain diagnostics.
-
-\begin{table}[t]
+\begin{figure*}[t]
 \centering
-\scriptsize
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{@{}lrr@{}}
-\toprule
-Features & Emotion F1 $\uparrow$ & Age F1 $\uparrow$ \\
-\midrule
-CLAE, 170k & $0.496\pm0.062$ & 0.208 \\
-Random CLAE & $0.316\pm0.028$ & 0.173 \\
-WavLM & $0.607\pm0.080$ & 0.252 \\
-Whisper-tiny & $0.632\pm0.058$ & 0.232 \\
-ECAPA & $0.523\pm0.049$ & 0.271 \\
-emotion2vec & $0.630\pm0.064$ & 0.248 \\
-Mimi & $0.616\pm0.077$ & 0.239 \\
-Higgs Audio V2 & $0.461\pm0.040$ & 0.236 \\
-\bottomrule
-\end{tabular}
-\caption{Historical 170k emotion and age results. Emotion variation is across five speaker-disjoint folds.}
-\label{tab:appendix-170k}
-\end{table}
-
-\begin{table}[t]
-\centering
-\scriptsize
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{@{}lrr@{}}
-\toprule
-Features & Speaker-ID acc. $\uparrow$ & Verification EER $\downarrow$ \\
-\midrule
-CLAE, 170k & 0.656 & 0.280 \\
-Random CLAE & 0.045 & 0.394 \\
-WavLM & 0.296 & 0.339 \\
-Whisper-tiny & 0.350 & 0.375 \\
-ECAPA & 0.952 & 0.060 \\
-emotion2vec & 0.323 & 0.344 \\
-Mimi & 0.647 & 0.231 \\
-Higgs Audio V2 & 0.737 & 0.185 \\
-\bottomrule
-\end{tabular}
-\caption{Historical 170k speaker results. Verification is mean+standard-deviation-pooled EER under the all-pairs protocol.}
-\label{tab:appendix-170k-speaker}
-\end{table}
-
-\begin{table}[t]
-\centering
-\small
-\begin{tabular}{@{}lrr@{}}
-\toprule
-Features & Dev CER $\downarrow$ & Dev WER $\downarrow$ \\
-\midrule
-CLAE, 170k & 0.826 & 1.113 \\
-WavLM & 0.501 & 0.859 \\
-\bottomrule
-\end{tabular}
-\caption{Historical 170k fixed-budget attention-ASR diagnostic. The run predates the current duration-validation path.}
-\label{tab:appendix-170k-asr}
-\end{table}
+\includegraphics[width=\textwidth]{figures/tikz/ablation_training_curves.pdf}
+\caption{Unsmoothed training loss curves for the six matched 25k conditions. The legend label ``Packed base'' denotes the full-objective model. Panels (b)--(d) show raw component values, not weighted contributions to the total objective. The dashed reconstruction curve for representation-only and dashed representation curves for reconstruction-only were logged diagnostically but had zero objective weight. These are training diagnostics, not validation curves or evidence of generalization.}
+\label{fig:ablation-training-curves}
+\end{figure*}
 
 \end{document}

@@ -2,14 +2,12 @@
 
 ## CLAE architecture
 
-- semantic_status: pass after safety check, compilation, and manual PNG inspection. The shared path is explicit; `z` independently feeds the projector, first-global decoder-corruption, and probe paths; view consistency and VISReg are parallel objectives on `p`; the clean waveform is only the reconstruction target. No EMA, target encoder, predictor, pooled VISReg, or FastConformer equivalence appears.
-- complexity_review: keep
-- mode: research
-- communication_job: distinguish the shared encoder path, parallel loss-only projector objectives, reconstruction from `z`, and evaluation from `z`
-- caption_text: Implemented training and evaluation paths. Two global and four full-length local views share the frontend, encoder, and projector. Parallel representation objectives act on per-frame projector outputs `p`; decoder corruption, waveform reconstruction, and frozen-feature probes consume encoder latents `z`.
-- render_version: `clae_architecture.png`
-- final_pdf_size: 493.32 x 192.46 pt (paper-safe full width)
-- automated_visual_qa: The checker reports `title_band_collision` because it treats the top-row process nodes as competing title text. This standalone paper figure intentionally has no internal title; manual inspection confirms that the top row is evenly spaced, fully visible, and non-overlapping. No clipping or text overlap is present. This is a detector false positive, not an unresolved layout defect.
+- Updated 2026-09-05: four-panel publication redesign; final preview `clae_architecture_v06.png`, editable source `clae_architecture.tex`, vector output `clae_architecture.pdf`.
+- complexity_review: keep; research mode.
+- math_logic_review: schematic. Waveforms and activation tiles are illustrative; dimensions, layers, rates, loss coefficients, and branch semantics follow the manuscript.
+- checked_invariants: six aligned full-length views; shared encoder; parallel losses on p; first-global z reconstruction; clean x target; frozen probes on z. No target encoder or quantizer is implied.
+- verification: native XeLaTeX compilation passed without font warnings; Poppler PNG render inspected; full manuscript compiled with pdfLaTeX and Figure 1 inspected on page 3 at manuscript width. No visible text overlap or clipping.
+- check exception: bundled Python safety and automated visual-check scripts were not run because repository instructions require prior permission for Python scripts. Native compilation and manual source and rendered inspection were used instead. The existing clae_architecture-visual-qa.json belongs to the previous design and does not validate this revision.
 
 ## VISReg adaptation
 
