@@ -1,0 +1,105 @@
+{
+  "pdf": "/Users/aryanrahman/Projects/research/continuous-latent-autoencoder/journal-latex-acl-template/figures/tikz/clae_architecture_v02.pdf",
+  "mode": "research",
+  "text_plot_overlap_check": false,
+  "plot_label_regex": null,
+  "page": {
+    "width": 493.32000732421875,
+    "height": 192.4600067138672
+  },
+  "text_box_count": 35,
+  "title": {
+    "text": "encoderlatentz",
+    "x0": 416.7166748046875,
+    "y0": 33.134098052978516,
+    "x1": 470.85845947265625,
+    "y1": 41.12574005126953,
+    "colors": [
+      0
+    ]
+  },
+  "issues": [
+    {
+      "severity": "error",
+      "code": "title_band_collision",
+      "message": "Text enters protected title band near 'encoderlatentz': 'sharedConformer-'",
+      "boxes": [
+        "encoderlatentz",
+        "sharedConformer-"
+      ]
+    },
+    {
+      "severity": "error",
+      "code": "title_band_collision",
+      "message": "Text enters protected title band near 'encoderlatentz': 'sixfull-lengthviews'",
+      "boxes": [
+        "encoderlatentz",
+        "sixfull-lengthviews"
+      ]
+    },
+    {
+      "severity": "error",
+      "code": "title_band_collision",
+      "message": "Text enters protected title band near 'encoderlatentz': 'sharedConv1D'",
+      "boxes": [
+        "encoderlatentz",
+        "sharedConv1D"
+      ]
+    },
+    {
+      "severity": "error",
+      "code": "title_band_collision",
+      "message": "Text enters protected title band near 'encoderlatentz': '16kHzwaveform'",
+      "boxes": [
+        "encoderlatentz",
+        "16kHzwaveform"
+      ]
+    },
+    {
+      "severity": "error",
+      "code": "title_band_collision",
+      "message": "Text enters protected title band near 'encoderlatentz': 'derived'",
+      "boxes": [
+        "encoderlatentz",
+        "derived"
+      ]
+    },
+    {
+      "severity": "error",
+      "code": "title_band_collision",
+      "message": "Text enters protected title band near 'encoderlatentz': '2global+4local'",
+      "boxes": [
+        "encoderlatentz",
+        "2global+4local"
+      ]
+    },
+    {
+      "severity": "error",
+      "code": "title_band_collision",
+      "message": "Text enters protected title band near 'encoderlatentz': '12.5Hz,256-D'",
+      "boxes": [
+        "encoderlatentz",
+        "12.5Hz,256-D"
+      ]
+    },
+    {
+      "severity": "error",
+      "code": "title_band_collision",
+      "message": "Text enters protected title band near 'encoderlatentz': 'frontend'",
+      "boxes": [
+        "encoderlatentz",
+        "frontend"
+      ]
+    },
+    {
+      "severity": "error",
+      "code": "title_band_collision",
+      "message": "Text enters protected title band near 'encoderlatentz': 'x'",
+      "boxes": [
+        "encoderlatentz",
+        "x"
+      ]
+    }
+  ],
+  "status": "fail"
+}
