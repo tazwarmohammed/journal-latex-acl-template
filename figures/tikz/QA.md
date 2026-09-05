@@ -11,11 +11,34 @@
 
 ## VISReg adaptation
 
-- semantic_status: pass after safety check, compilation, automated research-mode visual QA, and manual PNG inspection. The figure distinguishes the project-specific distributed population construction from the standard projection, sorting, and Gaussian-quantile matching sequence.
-- complexity_review: keep if space permits; omit before compressing the architecture figure
-- mode: research
-- communication_job: show the project-specific population construction and the sequence used for projected Gaussian-quantile matching
-- caption_text: Project-specific VISReg adaptation. Projector frames from every view and example are gathered into one distributed population, centered and scaled, projected onto 256 freshly sampled normalized directions, sorted, and matched to standard-normal quantiles.
-- render_version: `visreg_adaptation.png`
-- final_pdf_size: 493.07 x 80.72 pt (paper-safe full width)
-- automated_visual_qa: pass
+- Updated 2026-09-05: retained and redrawn in the architecture figure's navy,
+  teal, and gold palette with matching typography. Four panels show population
+  construction, detached normalization, random projections, and quantile
+  matching; the bottom strip gives the three component losses.
+- complexity_review: keep; research schematic, with distinct explanatory value
+  beyond the architecture overview. Tiles and the direction sketch are not data.
+- math_logic_review: compared with `models/visreg.py`; population mean, RMS
+  scale plus epsilon, detached divisor, normalized Gaussian directions, sorted
+  projections, normal quantiles, and component averaging agree with the code.
+- render_version: `visreg_adaptation_editorial.png`; editable source and vector
+  PDF retain `visreg_adaptation` as their basename.
+- verification: balanced-environment and unsafe-command checks in Node,
+  XeLaTeX compilation, Poppler rendering, and manual figure/manuscript inspection.
+  Old automated visual-QA files apply to the preceding figure, not this revision.
+
+## Matched training trajectories
+
+- Updated 2026-09-05: retained as Appendix Figure 3. Updated sans-serif labels,
+  restrained palette, grid, and step units to match the manuscript figures.
+- render_version: `ablation_training_curves_editorial.png`.
+- data_integrity: all 24 CSV paths and x/y column mappings match the preceding
+  source exactly. No smoothing, additional evaluation, or changed plotted data.
+- semantic_review: attempted training steps on x; weighted objectives in (a),
+  raw components in (b–d); dashed components have zero objective weight. Total
+  objective values cannot rank models trained with different losses.
+- verification: Node source checks, two XeLaTeX passes for the shared legend,
+  Poppler rendering, and manual standalone/manuscript inspection.
+- Python check exception for both figures: repository instructions require
+  prior permission for Python scripts. Native compilation and direct source /
+  rendered inspection were used instead; no Python, training, or model
+  evaluation was run.
